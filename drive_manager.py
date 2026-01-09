@@ -77,13 +77,13 @@ class DriveManager:
                     "client_secret": st.secrets["google_oauth"]["client_secret"],
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [st.experimental_get_url()],
+                    "redirect_uris": [self.REDIRECT_URI],
                 }
             },
             scopes=self.SCOPES,
         )
 
-        flow.redirect_uri = st.experimental_get_url()
+        flow.redirect_uri = self.REDIRECT_URI
 
         # STEP 1: No code yet → send user to Google
         if "code" not in st.query_params:
