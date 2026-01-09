@@ -4,7 +4,7 @@ import streamlit as st
 import json
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
-REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/load_files_from_gdrive"
+REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/"
 
 def start_oauth():
     flow = Flow.from_client_config(
