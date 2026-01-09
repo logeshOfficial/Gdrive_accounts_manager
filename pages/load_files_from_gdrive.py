@@ -23,11 +23,15 @@ if st.button("Chat Bot"):
 
 load_dotenv()
 
+if "processed_ids" not in st.session_state:
+    st.session_state.processed_ids = set()
+
+
 st.title("Accounts Manager - Google Drive")
 
 # STATE_FILE = "processing_state.json"
 
-processed_ids = set()
+# processed_ids = set()
 
 if "initialized" not in st.session_state:
     st.session_state.initialized = False
@@ -58,6 +62,11 @@ drive_manager = DriveManager(SCOPES)
 invoice_processor = InvoiceProcessor()
 
 def start_processing():
+    service = st.session_state.drive_service
+    root_folder_id = st.session_state.root_folder_id
+    DRIVE_DIRS = st.session_state.DRIVE_DIRS
+    output_id = DRIVE_DIRS["output"]
+
     
     st.success("🟢 System ready")
     st.info("📄 Processing invoices from Google Drive. Kindly please wait until the progress complete \n Note: *** Don't refresh the page.***")
@@ -82,7 +91,7 @@ def start_processing():
     MAX_GEMINI_DOCS = 5 
 
     # ================= Process Selected Folder =================
-    filepaths = [f for f in all_files if f["id"] not in processed_ids]
+    filepaths = [f for f in all_files if f["id"] not in st.session_state.processed_ids]
 
     progress = st.progress(0)
     status = st.empty()
@@ -222,14 +231,14 @@ def start_processing():
             progress.progress(min(processed_files / total_files, 1.0))
 
             for f in valid_file_paths + not_valid_file_paths:
-                processed_ids.add(f["id"])
+                st.session_state.processed_ids.add(f["id"])
 
-            tmp_state = STATE_FILE + ".tmp"
+            # tmp_state = STATE_FILE + ".tmp"
 
-            with open(tmp_state, "w", encoding="utf-8") as f:
-                json.dump(list(processed_ids), f)
+            # with open(tmp_state, "w", encoding="utf-8") as f:
+            #     json.dump(list(st.session_state.processed_ids), f)
 
-            os.replace(tmp_state, STATE_FILE)
+            # os.replace(tmp_state, STATE_FILE)
 
             batch_extracted.clear()
             batch_data.clear()
@@ -317,11 +326,16 @@ def start_processing():
         elapsed_time = end_time - start_time
         print(f"Loop execution time: {elapsed_time:.2f}s")
     
+# if "drive_creds" not in st.session_state:
+#     with st.spinner("🔐 Logging into Google Drive..."):
+#         st.session_state.drive_creds = drive_manager.login_to_google_drive()
+#     st.success("✅ Logged in successfully")
+
 if "drive_creds" not in st.session_state:
     with st.spinner("🔐 Logging into Google Drive..."):
         st.session_state.drive_creds = drive_manager.login_to_google_drive()
-    st.success("✅ Logged in successfully")
-    
+    st.stop()  # ⛔ VERY IMPORTANT
+
 if not st.session_state.initialized:
     st.subheader("🚀 Initializing workspace")
     progress = st.progress(0)
@@ -375,5 +389,16 @@ root_folder_id = st.session_state.root_folder_id
 DRIVE_DIRS = st.session_state.DRIVE_DIRS
 output_id = DRIVE_DIRS["output"]
 
-start_processing()
+if "run_processing" not in st.session_state:
+    st.session_state.run_processing = False
+
+if st.button("▶ Start Processing"):
+    st.session_state.run_processing = True
+
+if st.session_state.run_processing:
+    start_processing()
+
+
+
+# start_processing()
     
