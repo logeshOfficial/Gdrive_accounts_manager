@@ -19,7 +19,7 @@ from drive_manager import DriveManager
 import ai_models
 
 if st.button("Drive Manager"):
-    st.switch_page("pages/google_drive_loader.py")
+    st.switch_page("pages/load_files_from_gdrive.py")
     
 # ================= Streamlit UI =================
 st.title("Accounts Manager Chat bot")
