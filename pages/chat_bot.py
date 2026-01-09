@@ -46,7 +46,7 @@ def llm_call(prompt: str) -> str:
 SCOPES = ['https://www.googleapis.com/auth/drive']
 # SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
-drive_manager = DriveManager(SCOPES, "token.json")
+drive_manager = DriveManager(SCOPES)
 
 @st.cache_data(show_spinner=True)
 def load_invoices_from_drive():

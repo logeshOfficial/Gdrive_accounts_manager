@@ -25,7 +25,7 @@ load_dotenv()
 
 st.title("Accounts Manager - Google Drive")
 
-STATE_FILE = "processing_state.json"
+# STATE_FILE = "processing_state.json"
 
 processed_ids = set()
 
@@ -35,20 +35,20 @@ if "initialized" not in st.session_state:
 if "init_progress" not in st.session_state:
     st.session_state.init_progress = 0
 
-if os.path.exists(STATE_FILE):
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
+# if os.path.exists(STATE_FILE):
+#     try:
+#         with open(STATE_FILE, "r", encoding="utf-8") as f:
+#             content = f.read().strip()
 
-            if content:  # 👈 prevents empty-file crash
-                processed_ids = set(json.loads(content))
-            else:
-                processed_ids = set()
+#             if content:  # 👈 prevents empty-file crash
+#                 processed_ids = set(json.loads(content))
+#             else:
+#                 processed_ids = set()
 
-    except json.JSONDecodeError:
-        # corrupted or half-written state file
-        st.warning("⚠️ State file corrupted. Starting fresh.")
-        processed_ids = set()
+#     except json.JSONDecodeError:
+#         # corrupted or half-written state file
+#         st.warning("⚠️ State file corrupted. Starting fresh.")
+#         processed_ids = set()
 
 # ================= Google Drive Login =================
 SCOPES = ['https://www.googleapis.com/auth/drive']
