@@ -1,225 +1,379 @@
-import streamlit as st
-import time
-import os
+
 import gc
+import re
 import tempfile
-import json
+import time
+import pandas as pd
+import streamlit as st
 from random import randint
+from dotenv import load_dotenv
+import os
+import json
 from drive_manager import DriveManager
 from invoice_processor import InvoiceProcessor
+from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
-from utils.drive_login import get_drive_service
-service = get_drive_service()
-drive_manager = st.session_state.drive_manager
+import ai_models
 
-# ------------------ PAGE CONFIG ------------------
-st.set_page_config(page_title="Invoice Processor", layout="wide")
-st.title("🗂 Invoice Processing - Google Drive")
+st.session_state["drive_ready"] = True
+    
+if st.button("Chat Bot"):
+    st.cache_data.clear()
+    st.switch_page("pages/chat_bot.py")
 
-# ------------------ INIT PROCESSOR ------------------
-invoice_processor = InvoiceProcessor()
-STATE_FILE = "/tmp/processing_state.json"
+load_dotenv()
 
-if "processed_ids" not in st.session_state:
-    st.session_state.processed_ids = set()
+st.title("Accounts Manager - Google Drive")
+
+STATE_FILE = "processing_state.json"
+
+processed_ids = set()
+
+if "initialized" not in st.session_state:
+    st.session_state.initialized = False
+
+if "init_progress" not in st.session_state:
+    st.session_state.init_progress = 0
 
 if os.path.exists(STATE_FILE):
     try:
-        with open(STATE_FILE, "r") as f:
-            st.session_state.processed_ids = set(json.load(f))
-    except Exception:
-        st.warning("⚠️ Previous state corrupted, starting fresh.")
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
 
-# ------------------ LOAD DRIVE FILES ------------------
-def get_pending_files():
-    root_folder_id = st.session_state.root_folder_id
-    all_files = drive_manager.list_files_in_folder(service, root_folder_id)
-    # Only unprocessed files
-    return [f for f in all_files if f["id"] not in st.session_state.processed_ids]
+            if content:  # 👈 prevents empty-file crash
+                processed_ids = set(json.loads(content))
+            else:
+                processed_ids = set()
 
-# ------------------ PROCESSING ------------------
+    except json.JSONDecodeError:
+        # corrupted or half-written state file
+        st.warning("⚠️ State file corrupted. Starting fresh.")
+        processed_ids = set()
+
+# ================= Google Drive Login =================
+SCOPES = ['https://www.googleapis.com/auth/drive']
+TOKEN_FILE = "token.json"
+INPUTDOCS = os.getenv("INPUTDOCS", "InputDocs")
+drive_manager = DriveManager(SCOPES, TOKEN_FILE)
+invoice_processor = InvoiceProcessor()
+
 def start_processing():
-    DRIVE_DIRS = st.session_state.DRIVE_DIRS
-    output_id = DRIVE_DIRS["output"]
+    
+    st.success("🟢 System ready")
+    st.info("📄 Processing invoices from Google Drive. Kindly please wait until the progress complete \n Note: *** Don't refresh the page.***")
 
-    files_to_process = get_pending_files()
-    total_files = len(files_to_process)
-    if total_files == 0:
-        st.warning("No new files to process.")
-        return
 
-    st.info(f"📄 Found {total_files} new files. Starting processing...")
+    all_files = drive_manager.list_files_in_folder(
+        service,
+        root_folder_id
+    )
+
+    # ================= Main Processing Loop =================
+    start_time = time.time()
+
+    batch_size = 20
+    filepaths = []
+    batch_data =[]
+    batch_wise_filtered_data = []
+    filtered_batch_data = []
+    valid_file_paths = []
+    not_valid_file_paths = []
+
+    MAX_GEMINI_DOCS = 5 
+
+    # ================= Process Selected Folder =================
+    filepaths = [f for f in all_files if f["id"] not in processed_ids]
 
     progress = st.progress(0)
     status = st.empty()
 
-    batch_size = 20
-    MAX_GEMINI_DOCS = 5
+    total_files = len(filepaths)
+    processed_files = 0
 
-    valid_file_paths = []
-    not_valid_file_paths = []
-    batch_wise_filtered_data = []
+    if not filepaths:
+        st.warning("No files found in the selected folder.")
+    else:
+        st.info(f"{len(filepaths)} files found. Processing...")
 
-    start_time = time.time()
-
-    for i in range(0, total_files, batch_size):
-        batch = files_to_process[i:i+batch_size]
-        status.info(f"Processing files {i+1} → {min(i+batch_size, total_files)} of {total_files}")
-
-        # Extract invoice text
-        batch_extracted = invoice_processor.extractor(service, batch)
-
-        batch_data = []
-        file_mapping = []
-        filtered_batch_data = []
-
-        for item in batch_extracted:
-            batch_data.append(item["lines"])
-            file_mapping.append({"id": item["id"], "name": item["name"]})
-
-        KEYWORDS = ["total", "amount due", "grand total", "invoice total"]
-
-        # Filter files with total amounts
-        for idx, text in enumerate(batch_data):
-            has_total = any(
-                any(k in line.lower() for k in KEYWORDS)
-                and not "0.00" in line.lower()
-                for line in text
+    try:
+        for i in range(0, len(filepaths), batch_size):
+            parsed_data = []
+            batch = filepaths[i:i+batch_size]
+            status.info(
+                f"Processing files {i + 1} → {min(i + batch_size, total_files)} of {total_files}"
             )
-            if not has_total:
-                continue
-            filtered_batch_data.append({"text": text, "file": file_mapping[idx]})
+            
+            print("Batch_len: ",len(filepaths[i:i+batch_size]))
+            batch_extracted  = invoice_processor.extractor(service, filepaths[i:i+batch_size])
+            
+            batch_data = []
+            file_path_mapping = []
 
-        # Send to LLM in small chunks
-        parsed_data = []
-        for j in range(0, len(filtered_batch_data), MAX_GEMINI_DOCS):
-            chunk = filtered_batch_data[j:j+MAX_GEMINI_DOCS]
-            chunk_texts = [item["text"] for item in chunk]
+            for item in batch_extracted:
+                batch_data.append(item["lines"])
+                
+                file_path_mapping.append({
+                    "id": item["id"],
+                    "name": item["name"]
+                })
 
-            for attempt in range(5):
-                try:
-                    response = invoice_processor.client.responses.create(
-                        model=invoice_processor.OPENAI_MODEL,
-                        input=config.prompt + json.dumps(chunk_texts)
-                    )
-                    break
-                except Exception as e:
-                    wait = 10 + attempt*5
-                    status.warning(f"⏳ LLM rate limit, retrying in {wait}s...")
-                    time.sleep(wait)
-            else:
-                st.error("❌ LLM failed after retries")
-                continue
+            KEYWORDS = ["total", "amount due", "grand total", "invoice total"]
 
-            # Parse JSON
-            json_output = response.output_text
-            if '```json' in json_output:
-                json_output = json_output.split('```json')[-1].split('```')[0].strip()
-            elif '```' in json_output:
-                json_output = json_output.split('```')[-1].strip()
-
-            parsed_chunk = invoice_processor.safe_json_load(json_output)
-            for k, entry in enumerate(parsed_chunk):
-                entry["_file"] = chunk[k]["file"]
-            parsed_data.extend(parsed_chunk)
-
-            time.sleep(randint(2, 5))
-
-        # Validate invoices
-        filtered_data = []
-        for entry in parsed_data:
-            value = entry.get("total_amount", "")
-            total = "".join(c for c in value if c.isdigit() or c == ".")
-            if invoice_processor.is_valid_invoice(total):
-                entry["total_amount"] = total
-                filtered_data.append(entry)
-                valid_file_paths.append(entry["_file"])
-            else:
-                not_valid_file_paths.append(entry["_file"])
-
-        batch_wise_filtered_data.append(filtered_data)
-
-        # Move files in Drive
-        drive_manager.move_files_drive(service, valid_file_paths, "scanned_docs", DRIVE_DIRS)
-        drive_manager.move_files_drive(service, not_valid_file_paths, "invalid_docs", DRIVE_DIRS)
-
-        # Update processed IDs and state file
-        for f in valid_file_paths + not_valid_file_paths:
-            st.session_state.processed_ids.add(f["id"])
-        tmp_state = STATE_FILE + ".tmp"
-        with open(tmp_state, "w") as f:
-            json.dump(list(st.session_state.processed_ids), f)
-        os.replace(tmp_state, STATE_FILE)
-
-        # Update progress bar
-        progress.progress(min((i+batch_size)/total_files, 1.0))
-
-        # Cleanup
-        batch_extracted.clear()
-        batch_data.clear()
-        file_mapping.clear()
-        valid_file_paths.clear()
-        not_valid_file_paths.clear()
-        gc.collect()
-
-    status.success("✅ Batch processing complete!")
-
-    # ------------------ SAVE TO EXCEL ------------------
-    st.info("📥 Saving invoices to Excel in Drive...")
-    for batch in batch_wise_filtered_data:
-        for invoice in batch:
-            formatted_date = invoice_processor.format_date(invoice.get("invoice_date", ""))
-            invoice["invoice_date"] = formatted_date
-
-            year, month = invoice_processor.extract_year_month(formatted_date)
-            if year and month:
-                invoice_processor.year_month_data[year][month].append(invoice)
+            for idx, text in enumerate(batch_data):  
+                has_total = any(
+                    any(k in line.lower() for k in KEYWORDS)
+                    and not re.search(r'0\.00|zero', line.lower())
+                    for line in text
+                    )           
+            
+                if not has_total:
+                    continue            
+                
+                filtered_batch_data.append({
+                    "text": text,
+                    "file": file_path_mapping[idx]   
+                })   
+                
+            try:
+                for j in range(0, len(filtered_batch_data), MAX_GEMINI_DOCS):
+                    chunk = filtered_batch_data[j:j + MAX_GEMINI_DOCS]
                     
-    for year, months in invoice_processor.year_month_data.items():
-        fname = f"invoices_{year}.xlsx"
-        tmp_dir = tempfile.mkdtemp()
-        local_file = os.path.join(tmp_dir, fname)
-
-        # Download existing if exists
-        existing = drive_manager.drive_execute(
-            service.files().list(
-                q=f"name='{fname}' and '{DRIVE_DIRS['output']}' in parents and trashed=false",
-                fields="files(id)"
-            )
-        )["files"]
-
-        if existing:
-            drive_manager.download_drive_file(service, existing[0]["id"], local_file)
-
-        # Write Excel
-        import pandas as pd
-
-        if os.path.exists(local_file):
-            with pd.ExcelWriter(local_file, engine="openpyxl", mode="a", if_sheet_exists="overlay") as writer:
-                for month, data in months.items():
-                    df = pd.DataFrame(data)
-                    if month in writer.book.sheetnames:
-                        startrow = writer.sheets[month].max_row
-                        df.to_excel(writer, sheet_name=month, index=False, header=False, startrow=startrow)
+                    chunk_texts = [item["text"] for item in chunk]
+                    
+                    
+                    for attempt in range(5):
+                        try:
+                            # response = invoice_processor.model.generate_content(
+                            #     config.prompt + json.dumps(chunk_texts)
+                            # )
+                            response = invoice_processor.client.responses.create(
+                            model=invoice_processor.OPENAI_MODEL,
+                            input=config.prompt + json.dumps(chunk_texts)
+                            # temperature=0,
+                            # max_output_tokens=800
+                            )
+                            break
+                        
+                        except ResourceExhausted as e:
+                            wait = 10 + attempt * 5
+                            print(f"⏳ LLM model rate limit. Retrying in {wait}s")
+                            time.sleep(wait)
                     else:
+                        raise RuntimeError("❌ LLM failed after retries")
+
+                    # st.info(response.output_text)
+                    
+                    json_output = response.output_text            
+                            
+                    if '```json' in json_output:
+                        json_output = json_output.split('```json')[-1].split('```')[0].strip()
+                    elif '```' in json_output:
+                        json_output = json_output.split('```')[-1].strip()
+                    
+                    parsed_chunk = invoice_processor.safe_json_load(json_output)
+
+                    for k, entry in enumerate(parsed_chunk):
+                        entry["_file"] = chunk[k]["file"]
+
+                    parsed_data.extend(parsed_chunk)
+                    
+                    time.sleep(randint(3, 7))
+                            
+                filtered_data = []
+                
+                for idx, entry in enumerate(parsed_data):
+                    value = entry.get("total_amount", "")
+                    total = re.sub(r'[^\d.]', '', value.replace(",", "").replace("$", "").replace("₹", "").strip())
+
+                    if invoice_processor.is_valid_invoice(total):
+                        entry["total_amount"] = total
+                        filtered_data.append(entry)
+                        valid_file_paths.append(entry["_file"])
+                    else:
+                        not_valid_file_paths.append(entry["_file"])
+            
+                batch_wise_filtered_data.append(filtered_data)
+                
+            except Exception as e:
+                print(f"❌ Failed to parse or extract batch: {e}")
+                with open("failed_batch.json", "w", encoding="utf-8") as f:
+                    f.write(json.dumps(filtered_batch_data, indent=2))
+                continue
+            
+            filtered_batch_data.clear()
+            time.sleep(randint(3, 7))
+            
+            # Move processed files in Drive        
+            drive_manager.move_files_drive(
+                service,
+                valid_file_paths,
+                dest_dir="scanned_docs",
+                drive_dirs=DRIVE_DIRS
+            )
+
+            drive_manager.move_files_drive(
+                service,
+                not_valid_file_paths,
+                dest_dir="invalid_docs",
+                drive_dirs=DRIVE_DIRS
+            )
+            
+            processed_files += len(batch)
+            progress.progress(min(processed_files / total_files, 1.0))
+
+            for f in valid_file_paths + not_valid_file_paths:
+                processed_ids.add(f["id"])
+
+            tmp_state = STATE_FILE + ".tmp"
+
+            with open(tmp_state, "w", encoding="utf-8") as f:
+                json.dump(list(processed_ids), f)
+
+            os.replace(tmp_state, STATE_FILE)
+
+            batch_extracted.clear()
+            batch_data.clear()
+            file_path_mapping.clear()
+            gc.collect()
+            valid_file_paths.clear()
+            not_valid_file_paths.clear()
+                    
+    except Exception as e:
+        print("❌Error:", str(e))
+
+    finally:
+        for batch in batch_wise_filtered_data:
+            for invoice in batch:
+                formatted_date = invoice_processor.format_date(invoice.get("invoice_date", ""))
+                invoice["invoice_date"] = formatted_date
+
+                year, month = invoice_processor.extract_year_month(formatted_date)
+                if year and month:
+                    invoice_processor.year_month_data[year][month].append(invoice)
+                    
+        # ===================== EXCEL =====================
+        for year, months in invoice_processor.year_month_data.items():
+            fname = f"invoices_{year}.xlsx"
+            tmp_dir = tempfile.mkdtemp()
+            local = os.path.join(tmp_dir, fname)
+
+            existing = drive_manager.drive_execute(
+                service.files().list(
+                    q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
+                    fields="files(id)"
+                )
+            )["files"]
+
+            if existing:
+                drive_manager.download_drive_file(service, existing[0]["id"], local)
+
+            if os.path.exists(local):
+                with pd.ExcelWriter(
+                    local,
+                    engine="openpyxl",
+                    mode="a",
+                    if_sheet_exists="overlay"
+                ) as writer:
+                    for month, data in months.items():
+                        df = pd.DataFrame(data)
+
+                        if month in writer.book.sheetnames:
+                            startrow = writer.sheets[month].max_row
+                            df.to_excel(
+                                writer,
+                                sheet_name=month,
+                                index=False,
+                                header=False,
+                                startrow=startrow
+                            )
+                        else:
+                            df.to_excel(writer, sheet_name=month, index=False)
+
+                        del df
+                        gc.collect()
+                        time.sleep(1)
+            else:
+                with pd.ExcelWriter(local, engine="openpyxl", mode="w") as writer:
+                    for month, data in months.items():
+                        df = pd.DataFrame(data)
                         df.to_excel(writer, sheet_name=month, index=False)
-                    del df
-        else:
-            with pd.ExcelWriter(local_file, engine="openpyxl", mode="w") as writer:
-                for month, data in months.items():
-                    df = pd.DataFrame(data)
-                    df.to_excel(writer, sheet_name=month, index=False)
-                    del df
+                        del df
+                        gc.collect()
+                
+            media = MediaFileUpload(local, resumable=False)
+            if existing:
+                drive_manager.drive_execute(service.files().update(fileId=existing[0]["id"], media_body=media))
+            else:
+                drive_manager.drive_execute(service.files().create(body={"name": fname, "parents": [output_id]}, media_body=media))
 
-        # Upload to Drive
-        media = MediaFileUpload(local_file, resumable=False)
-        if existing:
-            drive_manager.drive_execute(service.files().update(fileId=existing[0]["id"], media_body=media))
-        else:
-            drive_manager.drive_execute(service.files().create(body={"name": fname, "parents":[DRIVE_DIRS['output']]}, media_body=media))
+            import shutil
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            
+        status.info("✅ Processing complete!")
+        st.success(f"✅ Completed in {time.time()-start_time:.2f}s")
 
-        import shutil
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"Loop execution time: {elapsed_time:.2f}s")
+    
+if "drive_creds" not in st.session_state:
+    with st.spinner("🔐 Logging into Google Drive..."):
+        st.session_state.drive_creds = drive_manager.login_to_google_drive()
+    st.success("✅ Logged in successfully")
+    
+if not st.session_state.initialized:
+    st.subheader("🚀 Initializing workspace")
+    progress = st.progress(0)
+    status = st.empty()
+    service = drive_manager.build_drive_service(st.session_state.drive_creds)
 
-    st.success(f"✅ All invoices processed in {time.time()-start_time:.2f}s!")
+    # Step 1: Root folder
+    status.info("📁 Checking root folder...")
+    root_folder_id = drive_manager.get_or_create_root_folder(
+        service,
+        INPUTDOCS
+    )
+    progress.progress(25)
+    st.info(f"Processing files from folder: {INPUTDOCS}")
+    
+    # Step 2: Subfolders
+    SUB_FOLDERS = ["scanned_docs", "invalid_docs", "output"]
+    DRIVE_DIRS = {}
+    # Create project folder structure if not exists
+    DRIVE_PROJECT_ROOT = "Invoice_Processing"
+    project_id = drive_manager.get_or_create_folder(service, DRIVE_PROJECT_ROOT)
+    
+    for idx, folder in enumerate(SUB_FOLDERS, start=1):
+        status.info(f"📂 Ensuring folder: {folder}")
+        DRIVE_DIRS[folder] = drive_manager.get_or_create_folder(
+            service,
+            folder,
+            parent_id=project_id
+        )
+        progress.progress(25 + idx * 15)
+        time.sleep(0.5)  # UX smoothness
+        
+        # Save for later use
+        st.session_state.drive_service = service
+        st.session_state.DRIVE_DIRS = DRIVE_DIRS
+        st.session_state.root_folder_id = root_folder_id
+
+    progress.progress(100)
+    status.success("✅ Initialization complete")
+
+    st.session_state.initialized = True
+    time.sleep(1)
+    st.rerun()
+    
+if not st.session_state.initialized:
+    st.info("⏳ Preparing your workspace, please wait...")
+    st.stop()
+
+service = st.session_state.drive_service
+root_folder_id = st.session_state.root_folder_id
+DRIVE_DIRS = st.session_state.DRIVE_DIRS
+output_id = DRIVE_DIRS["output"]
+
+start_processing()
+    

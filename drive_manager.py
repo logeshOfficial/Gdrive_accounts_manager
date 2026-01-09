@@ -1,23 +1,27 @@
+import os
 from pathlib import Path
 import time
+from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.errors import HttpError
 import random
 import time
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import streamlit as st
+import tempfile
 
 class DriveManager:
-    def __init__(self, SCOPES):
+    def __init__(self, SCOPES, TOKEN_FILE):
         self.SCOPES = SCOPES
+        self.TOKEN_FILE = TOKEN_FILE
         try:
             self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
         except KeyError:
             st.error("Google OAuth secrets not found. Please add them in app settings.")
             st.stop()
-
-        # self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
@@ -67,20 +71,21 @@ class DriveManager:
 
     def login_to_google_drive(self):
         flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": st.secrets["google_oauth"]["client_id"],
-                "client_secret": st.secrets["google_oauth"]["client_secret"],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [self.REDIRECT_URI],
-            }
-        },
-        scopes=self.SCOPES,
-        redirect_uri=self.REDIRECT_URI,
+            {
+                "web": {
+                    "client_id": st.secrets["google_oauth"]["client_id"],
+                    "client_secret": st.secrets["google_oauth"]["client_secret"],
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": [st.experimental_get_url()],
+                }
+            },
+            scopes=self.SCOPES,
         )
 
-        # 🔹 STEP 1: Redirect user to Google
+        flow.redirect_uri = st.experimental_get_url()
+
+        # STEP 1: No code yet → send user to Google
         if "code" not in st.query_params:
             auth_url, state = flow.authorization_url(
                 access_type="offline",
@@ -91,14 +96,53 @@ class DriveManager:
             st.link_button("🔐 Login with Google", auth_url)
             st.stop()
 
-        # 🔹 STEP 2: Google redirects back
-        if st.session_state.get("oauth_state") != st.query_params.get("state"):
-            st.error("OAuth state mismatch. Please retry login.")
-            st.stop()
-
+        # STEP 2: Google redirected back with code
         flow.fetch_token(code=st.query_params["code"])
         return flow.credentials
     
+    # def login_to_google_drive(self, force_relogin=False):
+    #     creds = None
+
+    #     if os.path.exists(self.TOKEN_FILE) and not force_relogin:
+    #         try:
+    #             creds = Credentials.from_authorized_user_file(self.TOKEN_FILE, self.SCOPES)
+    #         except Exception as e:
+    #             print("⚠️ Corrupted token.json detected. Re-authenticating...")
+    #             os.remove(self.TOKEN_FILE)
+    #             creds = None
+
+    #     if not creds or not creds.valid:
+    #         if creds and creds.expired and creds.refresh_token:
+    #             creds.refresh(Request())
+    #         else:
+    #             # 🔐 STREAMLIT CLOUD (use secrets)
+    #             if "google" in st.secrets:
+    #                 creds_json = st.secrets["google"]["credentials"]
+
+    #                 with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
+    #                     tmp.write(creds_json)
+    #                     tmp.flush()
+
+    #                     flow = InstalledAppFlow.from_client_secrets_file(
+    #                         tmp.name, self.SCOPES
+    #                     )
+    #             else:
+    #                 # 💻 LOCAL DEV fallback
+    #                 flow = InstalledAppFlow.from_client_secrets_file(
+    #                     "credentials.json", self.SCOPES
+    #                 )
+
+    #             creds = flow.run_local_server(port=0)
+            
+
+    #         # 🔒 SAVE TOKEN
+    #         tmp_token = self.TOKEN_FILE + ".tmp"
+    #         with open(tmp_token, "w") as token:
+    #             token.write(creds.to_json())
+    #         os.replace(tmp_token, self.TOKEN_FILE)
+            
+    #     return creds
+
     def build_drive_service(self,creds):
         return build('drive', 'v3', credentials=creds)
 
