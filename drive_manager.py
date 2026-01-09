@@ -9,6 +9,8 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
+import streamlit as st
+import tempfile
 
 class DriveManager:
     def __init__(self, SCOPES, TOKEN_FILE):
@@ -76,10 +78,25 @@ class DriveManager:
             if creds and creds.expired and creds.refresh_token:
                 creds.refresh(Request())
             else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", self.SCOPES
-                )
+                # 🔐 STREAMLIT CLOUD (use secrets)
+                if "google" in st.secrets:
+                    creds_json = st.secrets["google"]["credentials"]
+
+                    with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
+                        tmp.write(creds_json)
+                        tmp.flush()
+
+                        flow = InstalledAppFlow.from_client_secrets_file(
+                            tmp.name, self.SCOPES
+                        )
+                else:
+                    # 💻 LOCAL DEV fallback
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        "credentials.json", self.SCOPES
+                    )
+
                 creds = flow.run_local_server(port=0)
+            
 
             # 🔒 SAVE TOKEN
             tmp_token = self.TOKEN_FILE + ".tmp"
