@@ -4,6 +4,7 @@ import streamlit as st
 import json
 
 SCOPES = ["https://www.googleapis.com/auth/drive"]
+REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/"
 
 def start_oauth():
     flow = Flow.from_client_config(
@@ -13,13 +14,13 @@ def start_oauth():
                 "client_secret": st.secrets["google_oauth"]["client_secret"],
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [st.experimental_get_url()]
+                "redirect_uris": [REDIRECT_URI]
             }
         },
         scopes=SCOPES,
     )
 
-    flow.redirect_uri = st.experimental_get_url()
+    flow.redirect_uri = REDIRECT_URI
     auth_url, state = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
@@ -41,14 +42,14 @@ def finish_oauth():
                 "client_secret": st.secrets["google_oauth"]["client_secret"],
                 "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                 "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": [st.experimental_get_url()]
+                "redirect_uris": [REDIRECT_URI]
             }
         },
         scopes=SCOPES,
         state=st.session_state.oauth_state,
     )
 
-    flow.redirect_uri = st.experimental_get_url()
+    flow.redirect_uri = REDIRECT_URI
     flow.fetch_token(code=st.query_params["code"])
 
     creds = flow.credentials
