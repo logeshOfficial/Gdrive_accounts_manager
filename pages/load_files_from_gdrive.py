@@ -1,5 +1,10 @@
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__))) 
+import os
+
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+    
 import gc
 import re
 import tempfile

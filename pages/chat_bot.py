@@ -1,6 +1,10 @@
 import re
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__))) 
+import os
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+    
 import pandas as pd
 import json
 from dotenv import load_dotenv
@@ -19,7 +23,7 @@ import pandas as pd
 import streamlit as st
 from drive_manager import DriveManager
 import ai_models
-
+    
 if st.button("Drive Manager"):
     st.switch_page("pages/load_files_from_gdrive.py")
     
