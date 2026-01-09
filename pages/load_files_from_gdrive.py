@@ -1,4 +1,5 @@
-
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__))) 
 import gc
 import re
 import tempfile
@@ -15,7 +16,8 @@ from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
 import ai_models
-    
+
+
 if st.button("Chat Bot"):
     st.cache_data.clear()
     st.switch_page("pages/chat_bot.py")
