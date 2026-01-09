@@ -1,10 +1,4 @@
-import sys
-import os
-
-ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.append(ROOT_DIR)
-    
+import os   
 import gc
 import re
 import tempfile
@@ -58,9 +52,9 @@ if os.path.exists(STATE_FILE):
 
 # ================= Google Drive Login =================
 SCOPES = ['https://www.googleapis.com/auth/drive']
-TOKEN_FILE = "token.json"
+# TOKEN_FILE = "token.json"
 INPUTDOCS = os.getenv("INPUTDOCS", "InputDocs")
-drive_manager = DriveManager(SCOPES, TOKEN_FILE)
+drive_manager = DriveManager(SCOPES)
 invoice_processor = InvoiceProcessor()
 
 def start_processing():

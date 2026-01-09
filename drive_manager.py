@@ -14,9 +14,9 @@ import streamlit as st
 import tempfile
 
 class DriveManager:
-    def __init__(self, SCOPES, TOKEN_FILE):
+    def __init__(self, SCOPES, TOKEN_FILE=None):
         self.SCOPES = SCOPES
-        self.TOKEN_FILE = TOKEN_FILE
+        # self.TOKEN_FILE = TOKEN_FILE
         self.REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/"
 
     def drive_execute(self, request, retries=5):
