@@ -17,6 +17,7 @@ class DriveManager:
     def __init__(self, SCOPES, TOKEN_FILE):
         self.SCOPES = SCOPES
         self.TOKEN_FILE = TOKEN_FILE
+        self.REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/"
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
@@ -66,21 +67,20 @@ class DriveManager:
 
     def login_to_google_drive(self):
         flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": st.secrets["google_oauth"]["client_id"],
-                    "client_secret": st.secrets["google_oauth"]["client_secret"],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [st.experimental_get_url()],
-                }
-            },
-            scopes=self.SCOPES,
+        {
+            "web": {
+                "client_id": st.secrets["google_oauth"]["client_id"],
+                "client_secret": st.secrets["google_oauth"]["client_secret"],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [self.REDIRECT_URI],
+            }
+        },
+        scopes=self.SCOPES,
+        redirect_uri=self.REDIRECT_URI,
         )
 
-        flow.redirect_uri = st.experimental_get_url()
-
-        # STEP 1: No code yet → send user to Google
+        # 🔹 STEP 1: Redirect user to Google
         if "code" not in st.query_params:
             auth_url, state = flow.authorization_url(
                 access_type="offline",
@@ -91,7 +91,11 @@ class DriveManager:
             st.link_button("🔐 Login with Google", auth_url)
             st.stop()
 
-        # STEP 2: Google redirected back with code
+        # 🔹 STEP 2: Google redirects back
+        if st.session_state.get("oauth_state") != st.query_params.get("state"):
+            st.error("OAuth state mismatch. Please retry login.")
+            st.stop()
+
         flow.fetch_token(code=st.query_params["code"])
         return flow.credentials
     
