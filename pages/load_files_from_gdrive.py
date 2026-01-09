@@ -9,19 +9,13 @@ from drive_manager import DriveManager
 from invoice_processor import InvoiceProcessor
 from googleapiclient.http import MediaFileUpload
 import config
+from utils.drive_login import get_drive_service
+service = get_drive_service()
+drive_manager = st.session_state.drive_manager
 
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="Invoice Processor", layout="wide")
 st.title("🗂 Invoice Processing - Google Drive")
-
-# ------------------ CHECK DRIVE ------------------
-if "drive_creds" not in st.session_state:
-    st.warning("Please connect Google Drive first.")
-    st.stop()
-
-creds = st.session_state.drive_creds
-drive_manager = DriveManager(scopes=['https://www.googleapis.com/auth/drive'])
-service = drive_manager.build_drive_service(creds)
 
 # ------------------ INIT PROCESSOR ------------------
 invoice_processor = InvoiceProcessor()

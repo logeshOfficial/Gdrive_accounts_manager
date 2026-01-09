@@ -8,27 +8,21 @@ from googleapiclient.http import MediaIoBaseDownload
 from io import BytesIO
 from drive_manager import DriveManager
 import ai_models
+from utils.drive_login import get_drive_service
+service = get_drive_service()
+drive_manager = st.session_state.drive_manager
 
 # ------------------ PAGE CONFIG ------------------
 st.set_page_config(page_title="Invoice Assistant", layout="wide")
 st.title("📊 Invoice Query Assistant")
 st.caption("Ask questions like: *Total office supply invoices in Feb 2013*")
 
-# ------------------ CHECK DRIVE ------------------
-if "drive_creds" not in st.session_state:
-    st.warning("Please connect Google Drive first.")
-    st.stop()
 
 creds = st.session_state.drive_creds
 
 if not creds.valid:
     st.warning("Google Drive session expired. Please reconnect.")
     st.stop()
-
-# ------------------ INIT ------------------
-SCOPES = ["https://www.googleapis.com/auth/drive"]
-drive_manager = DriveManager(SCOPES)
-service = build("drive", "v3", credentials=creds)
 
 # ------------------ LOAD INVOICES ------------------
 @st.cache_data(show_spinner=True)
