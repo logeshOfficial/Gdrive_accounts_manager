@@ -17,7 +17,7 @@ class DriveManager:
     def __init__(self, SCOPES, TOKEN_FILE):
         self.SCOPES = SCOPES
         self.TOKEN_FILE = TOKEN_FILE
-        self.REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app"
+        self.REDIRECT_URI = "https://gdriveaccountsmanager-nu5f5kriwwayhzjhjrr9w6.streamlit.app/"
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
