@@ -11,7 +11,13 @@ import streamlit as st
 class DriveManager:
     def __init__(self, SCOPES):
         self.SCOPES = SCOPES
-        self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
+        try:
+            self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
+        except KeyError:
+            st.error("Google OAuth secrets not found. Please add them in app settings.")
+            st.stop()
+
+        # self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
