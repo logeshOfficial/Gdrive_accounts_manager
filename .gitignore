@@ -4,7 +4,7 @@
 # Virtual environment
 venv/
 
-
+processing_state.json
 credentials.json
 token.json
 failed_batch.json
