@@ -18,6 +18,7 @@ def start_oauth():
             }
         },
         scopes=SCOPES,
+        redirect_uri=REDIRECT_URI,
     )
 
     flow.redirect_uri = REDIRECT_URI
