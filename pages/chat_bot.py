@@ -3,13 +3,8 @@ import pandas as pd
 import json
 from dotenv import load_dotenv
 load_dotenv()  # Load from .env file
-# import google.generativeai as genai
-# from mistralai import Mistral
-import os
-import config
 from datetime import datetime
 import streamlit as st
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from io import BytesIO
@@ -17,17 +12,25 @@ import pandas as pd
 import streamlit as st
 from drive_manager import DriveManager
 import ai_models
+
+# ------------------- STREAMLIT UI -------------------
+st.set_page_config(page_title="Invoice Assistant", layout="wide")
+
+if "drive_creds" not in st.session_state:
+    st.warning("Please connect Google Drive first.")
+    st.switch_page("pages/load_files_from_gdrive.py")
     
+creds = st.session_state["drive_creds"]
+
+if not creds.valid:
+    st.warning("Google Drive session expired. Please reconnect.")
+    st.switch_page("pages/load_files_from_gdrive.py")
+
 if st.button("Drive Manager"):
     st.switch_page("pages/load_files_from_gdrive.py")
     
 # ================= Streamlit UI =================
 st.title("Accounts Manager Chat bot")
-
-# GEMINI_API_KEY = os.getenv("api_key")  
-# MODEL = os.getenv("model", "gemini-2.5-flash-lite")
-# genai.configure(api_key=GEMINI_API_KEY)
-# model = genai.GenerativeModel(MODEL)
 
 client_info = ai_models.initiate_huggingface_model()
 client = client_info["client"]
@@ -51,7 +54,6 @@ drive_manager = DriveManager(SCOPES)
 @st.cache_data(show_spinner=True)
 def load_invoices_from_drive():
     try:
-        # creds = Credentials.from_authorized_user_file("token.json", SCOPES)
         drive_service = build("drive", "v3", credentials=st.session_state["drive_creds"])
         DRIVE_PROJECT_ROOT = "Invoice_Processing"
         OUTPUT_FOLDER_NAME = "output"
@@ -158,9 +160,11 @@ JSON format:
     # response = model.generate_content(prompt)
     # text = response.text.strip()
 
-    match = re.search(r"\{[\s\S]+\}", text)
-    return json.loads(match.group()) if match else None
-
+    try:
+        match = re.search(r"\{[\s\S]+\}", text)
+        return json.loads(match.group()) if match else None
+    except json.JSONDecodeError:
+        return None
 # ------------------- RESPONSE REPHRASING -------------------
 def rephrase_answer(question, invoices, total, min_inv, max_inv):
     prompt = f"""
@@ -178,9 +182,6 @@ Write a clear, concise answer.
     # return response.text.strip()
     
     return llm_call(prompt)
-
-# ------------------- STREAMLIT UI -------------------
-st.set_page_config(page_title="Invoice Assistant", layout="wide")
 
 st.title("📊 Invoice Query Assistant")
 st.caption("Ask questions like: *Total office supply invoices in Feb 2013*")

@@ -30,6 +30,7 @@ if "processed_ids" not in st.session_state:
 st.title("Accounts Manager - Google Drive")
 
 # STATE_FILE = "processing_state.json"
+STATE_FILE = "/tmp/processing_state.json"
 
 # processed_ids = set()
 
@@ -233,12 +234,12 @@ def start_processing():
             for f in valid_file_paths + not_valid_file_paths:
                 st.session_state.processed_ids.add(f["id"])
 
-            # tmp_state = STATE_FILE + ".tmp"
+            tmp_state = STATE_FILE + ".tmp"
 
-            # with open(tmp_state, "w", encoding="utf-8") as f:
-            #     json.dump(list(st.session_state.processed_ids), f)
+            with open(tmp_state, "w", encoding="utf-8") as f:
+                json.dump(list(st.session_state.processed_ids), f)
 
-            # os.replace(tmp_state, STATE_FILE)
+            os.replace(tmp_state, STATE_FILE)
 
             batch_extracted.clear()
             batch_data.clear()
@@ -331,10 +332,24 @@ def start_processing():
 #         st.session_state.drive_creds = drive_manager.login_to_google_drive()
 #     st.success("✅ Logged in successfully")
 
+# if "drive_creds" not in st.session_state:
+#     with st.spinner("🔐 Logging into Google Drive..."):
+#         st.session_state.drive_creds = drive_manager.login_to_google_drive()
+#     st.stop()  # ⛔ VERY IMPORTANT
+    
 if "drive_creds" not in st.session_state:
-    with st.spinner("🔐 Logging into Google Drive..."):
-        st.session_state.drive_creds = drive_manager.login_to_google_drive()
-    st.stop()  # ⛔ VERY IMPORTANT
+    st.info("Please login to Google Drive")
+    creds = drive_manager.login_to_google_drive()
+    if not creds:
+        st.stop()
+        
+    st.session_state.drive_creds = creds
+    st.success("Drive connected")
+    st.rerun()
+
+if "drive_creds" in st.session_state:
+    st.success("Drive ready")
+
 
 if not st.session_state.initialized:
     st.subheader("🚀 Initializing workspace")
@@ -398,7 +413,4 @@ if st.button("▶ Start Processing"):
 if st.session_state.run_processing:
     start_processing()
 
-
-
-# start_processing()
-    
+st.session_state.drive_ready = True
