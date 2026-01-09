@@ -15,8 +15,6 @@ from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
 import ai_models
-
-st.session_state["drive_ready"] = True
     
 if st.button("Chat Bot"):
     st.cache_data.clear()

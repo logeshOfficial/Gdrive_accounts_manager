@@ -51,8 +51,8 @@ drive_manager = DriveManager(SCOPES, "token.json")
 @st.cache_data(show_spinner=True)
 def load_invoices_from_drive():
     try:
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-        drive_service = build("drive", "v3", credentials=creds)
+        # creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        drive_service = build("drive", "v3", credentials=st.session_state["drive_creds"])
         DRIVE_PROJECT_ROOT = "Invoice_Processing"
         OUTPUT_FOLDER_NAME = "output"
         

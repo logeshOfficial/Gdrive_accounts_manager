@@ -8,7 +8,7 @@ processing_state.json
 credentials.json
 token.json
 failed_batch.json
-
+client_secret.json
 # Python cache
 __pycache__/
 *.pyc
