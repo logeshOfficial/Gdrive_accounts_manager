@@ -41,7 +41,7 @@ def start_processing():
 
     MAX_GEMINI_DOCS = 5 
 
-    st.info(f"Total files to process: {len(all_files)}")
+    st.info(f"all_files: {all_files}")
     # ================= Process Selected Folder =================
     filepaths = [f for f in all_files]
 
