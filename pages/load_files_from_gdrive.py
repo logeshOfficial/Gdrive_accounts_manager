@@ -289,10 +289,6 @@ if "drive_manager" not in st.session_state:
         st.session_state.drive_manager = DriveManager(SCOPES)
     st.success("✅ Logged in successfully")
     
-drive_manager = st.session_state.drive_manager
-
-if "drive_dirs" not in st.session_state:
-    SCOPES = ["https://www.googleapis.com/auth/drive"]
     PROJECT_ROOT = "Invoice_Processing"
     
     st.subheader("🚀 Initializing workspace")
@@ -301,21 +297,23 @@ if "drive_dirs" not in st.session_state:
     
     # Step 1: Root folder
     status.info("📁 Checking root folder...")
-    project_id = drive_manager.get_or_create_folder(PROJECT_ROOT)
+    project_id = st.session_state.drive_manager.get_or_create_folder(PROJECT_ROOT)
     
     progress.progress(25)
     st.info(f"Processing files from folder: {INPUTDOCS}")
         
     st.session_state.drive_dirs = {
         "project_id": project_id,
-        "scanned_docs": drive_manager.get_or_create_folder("scanned_docs", project_id),
-        "invalid_docs": drive_manager.get_or_create_folder("invalid_docs", project_id),
-        "output": drive_manager.get_or_create_folder("output", project_id),
+        "scanned_docs": st.session_state.drive_manager.get_or_create_folder("scanned_docs", project_id),
+        "invalid_docs": st.session_state.drive_manager.get_or_create_folder("invalid_docs", project_id),
+        "output": st.session_state.drive_manager.get_or_create_folder("output", project_id),
     }
     progress.progress(100)
     status.success("✅ Initialization complete")
     time.sleep(1)
     
+drive_manager = st.session_state.drive_manager
+
 if st.button("Start Invoice Processing"):
     invoice_processor = InvoiceProcessor()
     root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
