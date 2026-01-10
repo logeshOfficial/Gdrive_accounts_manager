@@ -323,6 +323,6 @@ if st.button("Start Invoice Processing"):
     output_id = st.session_state.drive_dirs["output"]
     start_processing()
 
-st.session_state["drive_ready"] = True
+    st.session_state["drive_ready"] = True
 
     
