@@ -13,18 +13,18 @@ class DriveManager:
     def __init__(self, SCOPES):
         self.SCOPES = SCOPES
         try:
-            self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
+            # 🔐 Load service account from Streamlit secrets
+            creds = Credentials.from_service_account_info(
+                st.secrets["google_service_account"],
+                scopes=self.scopes,
+            )
+
+            self.service = build("drive", "v3", credentials=creds)
         except KeyError:
-            st.error("Google OAuth secrets not found. Please add them in app settings.")
+            st.error("Error ocured while loading Google Drive credentials on secrets. Please contact the administrator.")
             st.stop()
             
-        # 🔐 Load service account from Streamlit secrets
-        creds = Credentials.from_service_account_info(
-            st.secrets["google_service_account"],
-            scopes=self.scopes,
-        )
-
-        self.service = build("drive", "v3", credentials=creds)
+        
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
