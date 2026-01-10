@@ -278,7 +278,8 @@ if st.button("Chat Bot"):
     st.switch_page("pages/chat_bot.py")
         
 st.title("Accounts Manager - Google Drive")
-INPUTDOCS = st.secrets["INPUTDOCS"]
+PARENT_FOLDER = st.secrets["PARENT_FOLDER"]
+INPUT_DOCS = st.secrets["INPUT_DOCS"]
 
 if "init_progress" not in st.session_state:
     st.session_state.init_progress = 0
@@ -297,10 +298,11 @@ if "drive_manager" not in st.session_state:
     
     # Step 1: Root folder
     status.info("📁 Checking root folder...")
-    root_folder_id = st.session_state.drive_manager.resolve_folder_id(INPUTDOCS)
+    root_folder_id = st.session_state.drive_manager.resolve_folder_id(PARENT_FOLDER)
+    input_docs_folder_id = st.session_state.drive_manager.resolve_folder_id(INPUT_DOCS)
     
     progress.progress(25)
-    st.info(f"Processing files from folder: {INPUTDOCS}")
+    st.info(f"Processing files from folder: {PARENT_FOLDER}")
     
     st.session_state.drive_dirs = {
         "project_id": root_folder_id,
@@ -323,7 +325,8 @@ drive_manager = st.session_state.drive_manager
 
 if st.button("Start Invoice Processing"):
     invoice_processor = InvoiceProcessor()
-    root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
+    root_folder_id = drive_manager.resolve_folder_id(PARENT_FOLDER)
+    input_docs_folder_id = drive_manager.resolve_folder_id(INPUT_DOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
     start_processing()
