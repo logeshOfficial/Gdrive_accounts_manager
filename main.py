@@ -1,13 +1,16 @@
-import streamlit as st
+# import streamlit as st
 
-# 🚦 SAFE CHECK
-if not st.session_state.get("drive_ready", False):
-    st.switch_page("pages/load_files_from_gdrive.py")
+# # 🚦 SAFE CHECK
+# if not st.session_state.get("drive_ready", False):
+#     st.switch_page("pages/load_files_from_gdrive.py")
     
-st.title("Home")
+# st.title("Home")
 
-if st.button("Drive Manager"):
-    st.switch_page("pages/load_files_from_gdrive.py")
+# if st.button("Drive Manager"):
+#     st.switch_page("pages/load_files_from_gdrive.py")
 
-if st.button("Chat Bot"):
-    st.switch_page("pages/chat_bot.py")
+# if st.button("Chat Bot"):
+#     st.switch_page("pages/chat_bot.py")
+
+import streamlit as st
+st.write("OAuth-free app running ✅")
