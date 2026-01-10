@@ -14,42 +14,26 @@ from invoice_processor import InvoiceProcessor
 from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
-import ai_models
 
-st.session_state["drive_ready"] = True
-    
 if st.button("Chat Bot"):
     st.cache_data.clear()
     st.switch_page("pages/chat_bot.py")
-
+        
 load_dotenv()
 
 st.title("Accounts Manager - Google Drive")
 
-STATE_FILE = "processing_state.json"
+# STATE_FILE = "processing_state.json"
 
 processed_ids = set()
+
+st.session_state.processed_ids = set()
 
 if "initialized" not in st.session_state:
     st.session_state.initialized = False
 
 if "init_progress" not in st.session_state:
     st.session_state.init_progress = 0
-
-if os.path.exists(STATE_FILE):
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-
-            if content:  # 👈 prevents empty-file crash
-                processed_ids = set(json.loads(content))
-            else:
-                processed_ids = set()
-
-    except json.JSONDecodeError:
-        # corrupted or half-written state file
-        st.warning("⚠️ State file corrupted. Starting fresh.")
-        processed_ids = set()
 
 # ================= Google Drive Login =================
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -375,5 +359,6 @@ root_folder_id = st.session_state.root_folder_id
 DRIVE_DIRS = st.session_state.DRIVE_DIRS
 output_id = DRIVE_DIRS["output"]
 
-start_processing()
+st.session_state["drive_ready"] = True
+
     

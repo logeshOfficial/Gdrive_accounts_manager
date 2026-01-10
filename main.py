@@ -1,5 +1,4 @@
 import streamlit as st
-import config
 
 # 🚦 SAFE CHECK
 if not st.session_state.get("drive_ready", False):
