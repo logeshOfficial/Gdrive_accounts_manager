@@ -210,8 +210,6 @@ def start_processing():
                 if year and month:
                     invoice_processor.year_month_data[year][month].append(invoice)
         
-        st.error(f"YEAR_MONTH_DATA: {dict(invoice_processor.year_month_data)}")
-
         # ===================== EXCEL =====================
         for year, months in invoice_processor.year_month_data.items():
             fname = f"invoices_{year}.xlsx"
