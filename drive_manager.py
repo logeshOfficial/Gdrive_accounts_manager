@@ -4,19 +4,18 @@ import time
 from googleapiclient.errors import HttpError
 import random
 import time
-from google.oauth2.credentials import Credentials
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 import streamlit as st
 
 class DriveManager:
     def __init__(self, SCOPES):
-        self.SCOPES = SCOPES
         try:
             # 🔐 Load service account from Streamlit secrets
             creds = Credentials.from_service_account_info(
                 st.secrets["google_service_account"],
-                scopes=self.scopes,
+                scopes=SCOPES,
             )
 
             self.service = build("drive", "v3", credentials=creds)
