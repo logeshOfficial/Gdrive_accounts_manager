@@ -105,7 +105,7 @@ class InvoiceProcessor:
                     tmp.write(fh.getvalue())
                     temp_path = tmp.name
 
-                self.reader = self.get_ocr_reader()
+                self.reader = self.get_easyocr_reader()
                 text = "\n".join(self.reader.readtext(temp_path, detail=0, paragraph=True))
                 os.remove(temp_path)
 
