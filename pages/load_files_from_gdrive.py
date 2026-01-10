@@ -315,6 +315,11 @@ if "drive_dirs" not in st.session_state:
     status.success("✅ Initialization complete")
     time.sleep(1)
     
+    service = drive_manager.service
+    root_folder_id = project_id
+    DRIVE_DIRS = st.session_state.drive_dirs
+    output_id = st.session_state.drive_dirs["output"]
+    
     start_processing()
 
 if "initiate_invoice_processor" not in st.session_state:
@@ -324,11 +329,6 @@ if "initiate_invoice_processor" not in st.session_state:
 if not st.session_state.initialized:
     st.info("⏳ Preparing your workspace, please wait...")
     st.stop()
-
-service = st.session_state.drive_service
-root_folder_id = st.session_state.root_folder_id
-DRIVE_DIRS = st.session_state.drive_dirs
-output_id = st.session_state.drive_dirs["output"]
 
 st.session_state["drive_ready"] = True
 
