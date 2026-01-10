@@ -149,7 +149,10 @@ def start_processing():
                         valid_file_paths.append(entry["_file"])
                     else:
                         not_valid_file_paths.append(entry["_file"])
-            
+
+                st.info(f"Parsed invoices count: {len(parsed_data)}")
+                st.info(f"Valid invoices count: {len(filtered_data)}")
+
                 batch_wise_filtered_data.append(filtered_data)
                 
             except Exception as e:
@@ -206,7 +209,9 @@ def start_processing():
                 year, month = invoice_processor.extract_year_month(formatted_date)
                 if year and month:
                     invoice_processor.year_month_data[year][month].append(invoice)
-                    
+        
+        st.error(f"YEAR_MONTH_DATA: {dict(invoice_processor.year_month_data)}")
+
         # ===================== EXCEL =====================
         for year, months in invoice_processor.year_month_data.items():
             fname = f"invoices_{year}.xlsx"

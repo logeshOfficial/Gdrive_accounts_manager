@@ -58,15 +58,28 @@ class InvoiceProcessor:
 
     def is_valid_invoice(self, total):
         try:
-            if not total or float(total) == 0.0:
+            if total is None:
                 return False
-            
-            return True
-        
-        except Exception as e:
-            print("is_not_valid(expection): ", str(e))
-            print("Exception: ", str(e))
+
+            total = re.sub(r"[^\d.]", "", str(total))
+            if total == "":
+                return False
+
+            return float(total) > 0
+        except:
             return False
+    
+    # def is_valid_invoice(self, total):
+    #     try:
+    #         if not total or float(total) == 0.0:
+    #             return False
+            
+    #         return True
+        
+    #     except Exception as e:
+    #         print("is_not_valid(expection): ", str(e))
+    #         print("Exception: ", str(e))
+    #         return False
 
     def extractor(self, service, files):
         results = []
