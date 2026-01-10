@@ -64,7 +64,7 @@ def start_processing():
                 f"Processing files {i + 1} → {min(i + batch_size, total_files)} of {total_files}"
             )
             
-            st.info("Batch_len: ",len(filepaths[i:i+batch_size]))
+            st.info(f"Batch_len: {len(filepaths[i:i+batch_size])}")
             batch_extracted  = invoice_processor.extractor(service, filepaths[i:i+batch_size])
             
             batch_data = []
@@ -166,14 +166,12 @@ def start_processing():
             
             # Move processed files in Drive        
             drive_manager.move_files_drive(
-                service,
                 valid_file_paths,
                 dest_dir="scanned_docs",
                 drive_dirs=DRIVE_DIRS
             )
 
             drive_manager.move_files_drive(
-                service,
                 not_valid_file_paths,
                 dest_dir="invalid_docs",
                 drive_dirs=DRIVE_DIRS
@@ -226,7 +224,7 @@ def start_processing():
             )["files"]
 
             if existing:
-                drive_manager.download_drive_file(service, existing[0]["id"], local)
+                drive_manager.download_drive_file(existing[0]["id"], local)
 
             if os.path.exists(local):
                 with pd.ExcelWriter(
@@ -320,7 +318,7 @@ if "drive_dirs" not in st.session_state:
     time.sleep(1)
     
     service = drive_manager.service
-    root_folder_id = INPUTDOCS
+    root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
     
