@@ -36,9 +36,7 @@ def start_processing():
     batch_data =[]
     batch_wise_filtered_data = []
     filtered_batch_data = []
-    valid_file_paths = []
-    not_valid_file_paths = []
-
+    
     MAX_GEMINI_DOCS = 5 
 
     st.info(f"all_files: {all_files}")
@@ -58,6 +56,8 @@ def start_processing():
 
     try:
         for i in range(0, len(filepaths), batch_size):
+            valid_file_paths = []
+            not_valid_file_paths = []
             parsed_data = []
             batch = filepaths[i:i+batch_size]
             status.info(
@@ -65,7 +65,7 @@ def start_processing():
             )
             
             st.info(f"Batch_len: {len(filepaths[i:i+batch_size])}")
-            batch_extracted  = invoice_processor.extractor(service, filepaths[i:i+batch_size])
+            batch_extracted  = invoice_processor.extractor(drive_manager.service, filepaths[i:i+batch_size])
             
             batch_data = []
             file_path_mapping = []
@@ -217,7 +217,7 @@ def start_processing():
             local = os.path.join(tmp_dir, fname)
 
             existing = drive_manager.drive_execute(
-                service.files().list(
+                drive_manager.service.files().list(
                     q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
                     fields="files(id)"
                 )
@@ -261,9 +261,9 @@ def start_processing():
                 
             media = MediaFileUpload(local, resumable=False)
             if existing:
-                drive_manager.drive_execute(service.files().update(fileId=existing[0]["id"], media_body=media))
+                drive_manager.drive_execute(drive_manager.service.files().update(fileId=existing[0]["id"], media_body=media))
             else:
-                drive_manager.drive_execute(service.files().create(body={"name": fname, "parents": [output_id]}, media_body=media))
+                drive_manager.drive_execute(drive_manager.service.files().create(body={"name": fname, "parents": [output_id]}, media_body=media))
 
             import shutil
             shutil.rmtree(tmp_dir, ignore_errors=True)
@@ -317,7 +317,6 @@ if "drive_dirs" not in st.session_state:
     status.success("✅ Initialization complete")
     time.sleep(1)
     
-    service = drive_manager.service
     root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
