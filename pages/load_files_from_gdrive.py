@@ -162,13 +162,13 @@ def start_processing():
             time.sleep(randint(3, 7))
             
             # Move processed files in Drive        
-            drive_manager.move_files_drive(
+            st.session_state.drive_manager.move_files_drive(
                 valid_file_paths,
                 dest_dir="scanned_docs",
                 drive_dirs=DRIVE_DIRS
             )
             time.sleep(2) 
-            drive_manager.move_files_drive(
+            st.session_state.drive_manager.move_files_drive(
                 not_valid_file_paths,
                 dest_dir="invalid_docs",
                 drive_dirs=DRIVE_DIRS
@@ -213,7 +213,7 @@ def start_processing():
             tmp_dir = tempfile.mkdtemp()
             local = os.path.join(tmp_dir, fname)
 
-            existing = drive_manager.drive_execute(
+            existing = st.session_state.drive_manager.drive_execute(
                 st.session_state.drive_manager.service.files().list(
                     q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
                     fields="files(id)"
@@ -222,7 +222,7 @@ def start_processing():
             time.sleep(2) 
              
             if existing:
-                drive_manager.download_drive_file(existing[0]["id"], local)
+                st.session_state.drive_manager.download_drive_file(existing[0]["id"], local)
 
             if os.path.exists(local):
                 with pd.ExcelWriter(
