@@ -63,6 +63,7 @@ def start_processing():
             st.info(f"Batch_len: {len(filepaths[i:i+batch_size])}")
             batch_extracted  = invoice_processor.extractor(drive_manager.service, filepaths[i:i+batch_size])
             
+            st.info(batch_extracted)
             batch_data = []
             file_path_mapping = []
 
