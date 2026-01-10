@@ -17,8 +17,7 @@ load_dotenv()
 
 class InvoiceProcessor:
     def __init__(self):
-        self.client_info = ai_models.initiate_huggingface_model(st.secrets["api_key"])
-        self.client = self.client_info["client"]
+        self.client = ai_models.initiate_huggingface_model(st.secrets["api_key"])
         self.OPENAI_MODEL = st.secrets["model"]
 
         self.reader = None
