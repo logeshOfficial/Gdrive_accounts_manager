@@ -320,9 +320,10 @@ if "drive_dirs" not in st.session_state:
     root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
-    
+
+if st.button("Start Invoice Processing"):
     start_processing()
-    
+
 st.session_state["drive_ready"] = True
 
     

@@ -11,6 +11,7 @@ from collections import defaultdict
 import ai_models
 from dotenv import load_dotenv
 # import google.generativeai as genai
+import streamlit as st
 
 load_dotenv()
 
@@ -24,11 +25,16 @@ class InvoiceProcessor:
 
         self.year_month_data = defaultdict(lambda: defaultdict(list))
     
-    def get_ocr_reader(self):
-        if self.reader is None:
-            import easyocr
-            self.reader = easyocr.Reader(['en'], gpu=False)
-        return self.reader
+    @st.cache_resource
+    def get_easyocr_reader():
+        import easyocr
+        return easyocr.Reader(['en'], gpu=False)
+    
+    # def get_ocr_reader(self):
+    #     if self.reader is None:
+    #         import easyocr
+    #         self.reader = easyocr.Reader(['en'], gpu=False)
+    #     return self.reader
     
     # ================= LLM Call =================
     def safe_json_load(self, text):
