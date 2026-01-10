@@ -13,10 +13,6 @@ from invoice_processor import InvoiceProcessor
 from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
-
-if "initiate_invoice_processor" not in st.session_state:
-    invoice_processor = InvoiceProcessor()
-    st.session_state.initiate_invoice_processor = True
     
 def start_processing():
     
@@ -319,6 +315,7 @@ if "drive_dirs" not in st.session_state:
     time.sleep(1)
     
 if st.button("Start Invoice Processing"):
+    invoice_processor = InvoiceProcessor()
     root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
