@@ -6,14 +6,9 @@ import os
 from dotenv import load_dotenv
 load_dotenv()  # Load from .env file
 
-def initiate_huggingface_model():
-    HUGGINGFACE_API_KEY = os.getenv("api_key")
-    client = OpenAI(api_key=HUGGINGFACE_API_KEY, base_url="https://router.huggingface.co/v1")
-    MODEL = os.getenv("model", "MiniMaxAI/MiniMax-M2.1:novita")
-    return {
-        "client": client,
-        "model": MODEL
-    }
+def initiate_huggingface_model(api_key=None):
+    client = OpenAI(api_key=api_key, base_url="https://router.huggingface.co/v1")
+    return client
 
 def initiate_openai_model():
     OPENAI_API_KEY = os.getenv("api_key")  
