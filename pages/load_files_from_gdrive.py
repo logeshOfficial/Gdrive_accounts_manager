@@ -25,7 +25,7 @@ def start_processing():
 
 
     all_files = drive_manager.list_files_in_folder(
-        st.session_state.root_folder_id
+        root_folder_id
     )
 
     # ================= Main Processing Loop =================
@@ -317,11 +317,10 @@ if "drive_dirs" not in st.session_state:
     status.success("✅ Initialization complete")
     time.sleep(1)
     
-    st.session_state.root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
+if st.button("Start Invoice Processing"):
+    root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
-
-if st.button("Start Invoice Processing"):
     start_processing()
 
 st.session_state["drive_ready"] = True
