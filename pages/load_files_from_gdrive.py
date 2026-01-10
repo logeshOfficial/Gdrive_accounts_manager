@@ -205,7 +205,8 @@ def start_processing():
             for invoice in batch:
                 formatted_date = invoice_processor.format_date(invoice.get("invoice_date", ""))
                 invoice["invoice_date"] = formatted_date
-
+                
+                st.info(f"Formatted Date: {formatted_date}")
                 year, month = invoice_processor.extract_year_month(formatted_date)
                 if year and month:
                     invoice_processor.year_month_data[year][month].append(invoice)
