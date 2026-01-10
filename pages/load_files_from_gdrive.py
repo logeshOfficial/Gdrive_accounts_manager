@@ -326,10 +326,6 @@ if "initiate_invoice_processor" not in st.session_state:
     invoice_processor = InvoiceProcessor()
     st.session_state.initiate_invoice_processor = True
     
-if not st.session_state.initialized:
-    st.info("⏳ Preparing your workspace, please wait...")
-    st.stop()
-
 st.session_state["drive_ready"] = True
 
     
