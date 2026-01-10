@@ -41,6 +41,7 @@ def start_processing():
 
     MAX_GEMINI_DOCS = 5 
 
+    st.info(f"Total files to process: {len(all_files)}")
     # ================= Process Selected Folder =================
     filepaths = [f for f in all_files]
 
@@ -63,7 +64,7 @@ def start_processing():
                 f"Processing files {i + 1} → {min(i + batch_size, total_files)} of {total_files}"
             )
             
-            print("Batch_len: ",len(filepaths[i:i+batch_size]))
+            st.info("Batch_len: ",len(filepaths[i:i+batch_size]))
             batch_extracted  = invoice_processor.extractor(service, filepaths[i:i+batch_size])
             
             batch_data = []
