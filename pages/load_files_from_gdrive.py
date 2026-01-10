@@ -167,7 +167,7 @@ def start_processing():
                 dest_dir="scanned_docs",
                 drive_dirs=DRIVE_DIRS
             )
-
+            time.sleep(2) 
             drive_manager.move_files_drive(
                 not_valid_file_paths,
                 dest_dir="invalid_docs",
@@ -219,7 +219,8 @@ def start_processing():
                     fields="files(id)"
                 )
             )["files"]
-
+            time.sleep(2) 
+             
             if existing:
                 drive_manager.download_drive_file(existing[0]["id"], local)
 

@@ -25,9 +25,10 @@ class DriveManager:
             
         
 
-    def drive_execute(self, request, retries=5):
+    def drive_execute(self, request, retries=8):
         for i in range(retries):
             try:
+                time.sleep(0.4)
                 return request.execute()
             except HttpError as e:
                 if e.resp.status in [403, 429, 500, 503]:
