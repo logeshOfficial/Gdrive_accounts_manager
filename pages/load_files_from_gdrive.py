@@ -39,7 +39,7 @@ def start_processing():
     MAX_GEMINI_DOCS = 5 
 
     # ================= Process Selected Folder =================
-    filepaths = [f for f in all_files if f["id"] not in processed_ids]
+    filepaths = [f for f in all_files]
 
     progress = st.progress(0)
     status = st.empty()
@@ -178,15 +178,15 @@ def start_processing():
             processed_files += len(batch)
             progress.progress(min(processed_files / total_files, 1.0))
 
-            for f in valid_file_paths + not_valid_file_paths:
-                processed_ids.add(f["id"])
+            # for f in valid_file_paths + not_valid_file_paths:
+            #     processed_ids.add(f["id"])
 
-            tmp_state = STATE_FILE + ".tmp"
+            # tmp_state = STATE_FILE + ".tmp"
 
-            with open(tmp_state, "w", encoding="utf-8") as f:
-                json.dump(list(processed_ids), f)
+            # with open(tmp_state, "w", encoding="utf-8") as f:
+            #     json.dump(list(processed_ids), f)
 
-            os.replace(tmp_state, STATE_FILE)
+            # os.replace(tmp_state, STATE_FILE)
 
             batch_extracted.clear()
             batch_data.clear()
