@@ -5,7 +5,7 @@ import re
 from dateutil import parser
 import tempfile
 import fitz  # PyMuPDF
-import easyocr
+# import easyocr
 from googleapiclient.http import MediaIoBaseDownload
 from collections import defaultdict
 import ai_models
@@ -24,10 +24,10 @@ class InvoiceProcessor:
 
         self.year_month_data = defaultdict(lambda: defaultdict(list))
     
-    @st.cache_resource
-    def get_easyocr_reader():
-        import easyocr
-        return easyocr.Reader(['en'], gpu=False)
+    # @st.cache_resource
+    # def get_easyocr_reader():
+    #     import easyocr
+    #     return easyocr.Reader(['en'], gpu=False, verbose=False)
         
     # ================= LLM Call =================
     def safe_json_load(self, text):
@@ -86,21 +86,21 @@ class InvoiceProcessor:
                 for page in doc:
                     text += page.get_text()
 
-            elif ext in [".png", ".jpg", ".jpeg"]:
-                fh = io.BytesIO()
-                request = service.files().get_media(fileId=f['id'])
-                downloader = MediaIoBaseDownload(fh, request)
-                done = False
-                while not done:
-                    _, done = downloader.next_chunk()
+            # elif ext in [".png", ".jpg", ".jpeg"]:
+            #     fh = io.BytesIO()
+            #     request = service.files().get_media(fileId=f['id'])
+            #     downloader = MediaIoBaseDownload(fh, request)
+            #     done = False
+            #     while not done:
+            #         _, done = downloader.next_chunk()
 
-                with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
-                    tmp.write(fh.getvalue())
-                    temp_path = tmp.name
+            #     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            #         tmp.write(fh.getvalue())
+            #         temp_path = tmp.name
 
-                self.reader = self.get_easyocr_reader()
-                text = "\n".join(self.reader.readtext(temp_path, detail=0, paragraph=True))
-                os.remove(temp_path)
+            #     self.reader = self.get_easyocr_reader()
+            #     text = "\n".join(self.reader.readtext(temp_path, detail=0, paragraph=True))
+            #     os.remove(temp_path)
 
             else:
                 continue
