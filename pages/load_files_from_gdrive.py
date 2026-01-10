@@ -264,10 +264,24 @@ def start_processing():
                 
             media = MediaFileUpload(local, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resumable=True)
             if existing:
-                st.session_state.drive_manager.drive_execute(st.session_state.drive_manager.service.files().update(fileId=existing[0]["id"], media_body=media), supportsAllDrives=True)
-            else:
-                st.session_state.drive_manager.drive_execute(st.session_state.drive_manager.service.files().create(body={"name": fname, "parents": [output_id]}, media_body=media), supportsAllDrives=True)
+                request = st.session_state.drive_manager.service.files().update(
+                fileId=existing[0]["id"],
+                media_body=media,
+                supportsAllDrives=True
+                )
 
+                st.session_state.drive_manager.drive_execute(request)
+            
+            else:
+                request = st.session_state.drive_manager.service.files().create(
+                    body={"name": fname, "parents": [output_id]},
+                    media_body=media,
+                    supportsAllDrives=True
+                )
+
+                st.session_state.drive_manager.drive_execute(request)
+
+                
             import shutil
             shutil.rmtree(tmp_dir, ignore_errors=True)
             
