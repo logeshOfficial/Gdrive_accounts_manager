@@ -9,6 +9,8 @@ credentials.json
 token.json
 failed_batch.json
 client_secret.json
+GSA.json
+
 # Python cache
 __pycache__/
 *.pyc

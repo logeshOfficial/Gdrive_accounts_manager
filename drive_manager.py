@@ -14,14 +14,21 @@ import streamlit as st
 import tempfile
 
 class DriveManager:
-    def __init__(self, SCOPES, TOKEN_FILE):
+    def __init__(self, SCOPES):
         self.SCOPES = SCOPES
-        self.TOKEN_FILE = TOKEN_FILE
         try:
             self.REDIRECT_URI = st.secrets["google_oauth"]["redirect_uri"]
         except KeyError:
             st.error("Google OAuth secrets not found. Please add them in app settings.")
             st.stop()
+            
+        # 🔐 Load service account from Streamlit secrets
+        creds = Credentials.from_service_account_info(
+            st.secrets["google_service_account"],
+            scopes=self.scopes,
+        )
+
+        self.service = build("drive", "v3", credentials=creds)
 
     def drive_execute(self, request, retries=5):
         for i in range(retries):
@@ -36,7 +43,7 @@ class DriveManager:
                     raise
         raise RuntimeError("❌ Drive API failed after retries")
 
-    def get_or_create_folder(self,service, folder_name, parent_id=None):
+    def get_or_create_folder(self, folder_name, parent_id=None):
         """
         Returns folder ID. Creates folder if it doesn't exist.
         parent_id: Folder ID in which this folder should be created
@@ -50,7 +57,7 @@ class DriveManager:
         if parent_id:
             query += f" and '{parent_id}' in parents"
 
-        results = self.drive_execute(service.files().list(q=query,
+        results = self.drive_execute(self.service.files().list(q=query,
             spaces="drive",
             fields="files(id, name)"))
 
@@ -65,88 +72,11 @@ class DriveManager:
         if parent_id:
             metadata["parents"] = [parent_id]
 
-        folder = self.drive_execute(service.files().create(body=metadata, fields="id"))
+        folder = self.drive_execute(self.service.files().create(body=metadata, fields="id"))
         
         return folder["id"]
 
-    def login_to_google_drive(self):
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": st.secrets["google_oauth"]["client_id"],
-                    "client_secret": st.secrets["google_oauth"]["client_secret"],
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                    "redirect_uris": [self.REDIRECT_URI],
-                }
-            },
-            scopes=self.SCOPES,
-        )
-
-        flow.redirect_uri = self.REDIRECT_URI
-
-        # STEP 1: No code yet → send user to Google
-        if "code" not in st.query_params:
-            auth_url, state = flow.authorization_url(
-                access_type="offline",
-                prompt="consent",
-                include_granted_scopes="true",
-            )
-            st.session_state.oauth_state = state
-            st.link_button("🔐 Login with Google", auth_url)
-            st.stop()
-
-        # STEP 2: Google redirected back with code
-        flow.fetch_token(code=st.query_params["code"])
-        return flow.credentials
-    
-    # def login_to_google_drive(self, force_relogin=False):
-    #     creds = None
-
-    #     if os.path.exists(self.TOKEN_FILE) and not force_relogin:
-    #         try:
-    #             creds = Credentials.from_authorized_user_file(self.TOKEN_FILE, self.SCOPES)
-    #         except Exception as e:
-    #             print("⚠️ Corrupted token.json detected. Re-authenticating...")
-    #             os.remove(self.TOKEN_FILE)
-    #             creds = None
-
-    #     if not creds or not creds.valid:
-    #         if creds and creds.expired and creds.refresh_token:
-    #             creds.refresh(Request())
-    #         else:
-    #             # 🔐 STREAMLIT CLOUD (use secrets)
-    #             if "google" in st.secrets:
-    #                 creds_json = st.secrets["google"]["credentials"]
-
-    #                 with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
-    #                     tmp.write(creds_json)
-    #                     tmp.flush()
-
-    #                     flow = InstalledAppFlow.from_client_secrets_file(
-    #                         tmp.name, self.SCOPES
-    #                     )
-    #             else:
-    #                 # 💻 LOCAL DEV fallback
-    #                 flow = InstalledAppFlow.from_client_secrets_file(
-    #                     "credentials.json", self.SCOPES
-    #                 )
-
-    #             creds = flow.run_local_server(port=0)
-            
-
-    #         # 🔒 SAVE TOKEN
-    #         tmp_token = self.TOKEN_FILE + ".tmp"
-    #         with open(tmp_token, "w") as token:
-    #             token.write(creds.to_json())
-    #         os.replace(tmp_token, self.TOKEN_FILE)
-            
-    #     return creds
-
-    def build_drive_service(self,creds):
-        return build('drive', 'v3', credentials=creds)
-
-    def get_or_create_root_folder(self, service, folder_name):
+    def get_or_create_root_folder(self, folder_name):
         """
         Returns folder ID if exists, otherwise creates it.
         """
@@ -157,7 +87,7 @@ class DriveManager:
         )
 
         response = self.drive_execute(
-            service.files().list(
+            self.service.files().list(
                 q=query,
                 fields="files(id, name)"
             )
@@ -173,7 +103,7 @@ class DriveManager:
         }
 
         folder = self.drive_execute(
-            service.files().create(
+            self.service.files().create(
                 body=folder_metadata,
                 fields="id"
             )
@@ -181,36 +111,28 @@ class DriveManager:
 
         return folder["id"]
 
-
-    def list_drive_folders(self,service):
-        results = self.drive_execute(service.files().list(q="mimeType='application/vnd.google-apps.folder' and trashed=false",
-            spaces='drive',
-            fields="files(id, name)"))
-        folders = results.get('files', [])
-        return folders
-
-    def list_files_in_folder(self,service, folder_id):
+    def list_files_in_folder(self, folder_id):
         
-        results = self.drive_execute(service.files().list(q=f"'{folder_id}' in parents and trashed=false",
+        results = self.drive_execute(self.service.files().list(q=f"'{folder_id}' in parents and trashed=false",
             spaces='drive',
             fields="files(id, name, mimeType)"))
         
         return results.get('files', [])
     
-    def move_files_drive(self, service, files, dest_dir, drive_dirs):
+    def move_files_drive(self, files, dest_dir, drive_dirs):
         dest_folder_id = drive_dirs[dest_dir]
 
         for f in files:
             try:
                 new_name = f"{Path(f['name']).stem}_{int(time.time())}{Path(f['name']).suffix}"
                 file = self.drive_execute(
-                    service.files().get(
+                    self.service.files().get(
                         fileId=f["id"],
                         fields="parents"
                     )
                 )
                 self.drive_execute(
-                    service.files().update(
+                    self.service.files().update(
                         fileId=f["id"],
                         addParents=dest_folder_id,
                         removeParents=",".join(file["parents"]),
@@ -223,8 +145,8 @@ class DriveManager:
             except Exception as e:
                 print(f"❌ Failed to move {f['name']}: {e}")
 
-    def download_drive_file(self, service, file_id, local_path):
-        request = service.files().get_media(fileId=file_id)
+    def download_drive_file(self, file_id, local_path):
+        request = self.service.files().get_media(fileId=file_id)
 
         with open(local_path, "wb") as fh:
             downloader = MediaIoBaseDownload(fh, request)
@@ -232,7 +154,7 @@ class DriveManager:
             while not done:
                 _, done = downloader.next_chunk()
                 
-    def resolve_folder_id(self, service, folder_name, parent_id=None):
+    def resolve_folder_id(self, folder_name, parent_id=None):
         query = (
             f"name='{folder_name}' and "
             f"mimeType='application/vnd.google-apps.folder' and "
@@ -242,7 +164,7 @@ class DriveManager:
         if parent_id:
             query += f" and '{parent_id}' in parents"
 
-        result = self.drive_execute(service.files().list(q=query,
+        result = self.drive_execute(self.service.files().list(q=query,
             fields="files(id, name)"))
 
         files = result.get("files", [])

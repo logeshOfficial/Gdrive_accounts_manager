@@ -16,16 +16,6 @@ load_dotenv()
 
 class InvoiceProcessor:
     def __init__(self):
-        # ================= Configuration =================
-        self.GEMINI_API_KEY = os.getenv("api_key")
-        self.INPUT_DIR = "input_docs"
-        self.SCANNED_DIR = "scanned_docs"
-        self.INVALID_DOCS_DIR = "invalid_docs"
-        self.EXCEL_OUTPUT = "output"
-        # self.MODEL = os.getenv("model", "gemini-2.5-flash-lite")
-        # genai.configure(api_key=self.GEMINI_API_KEY)
-        # self.model = genai.GenerativeModel(self.MODEL)
-
         self.client_info = ai_models.initiate_huggingface_model()
         self.client = self.client_info["client"]
         self.OPENAI_MODEL = self.client_info["model"]

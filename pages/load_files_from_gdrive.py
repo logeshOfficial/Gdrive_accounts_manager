@@ -6,7 +6,6 @@ import time
 import pandas as pd
 import streamlit as st
 from random import randint
-from dotenv import load_dotenv
 import os
 import json
 from drive_manager import DriveManager
@@ -14,33 +13,6 @@ from invoice_processor import InvoiceProcessor
 from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
-
-if st.button("Chat Bot"):
-    st.cache_data.clear()
-    st.switch_page("pages/chat_bot.py")
-        
-load_dotenv()
-
-st.title("Accounts Manager - Google Drive")
-
-# STATE_FILE = "processing_state.json"
-
-processed_ids = set()
-
-st.session_state.processed_ids = set()
-
-if "initialized" not in st.session_state:
-    st.session_state.initialized = False
-
-if "init_progress" not in st.session_state:
-    st.session_state.init_progress = 0
-
-# ================= Google Drive Login =================
-SCOPES = ['https://www.googleapis.com/auth/drive']
-TOKEN_FILE = "token.json"
-INPUTDOCS = os.getenv("INPUTDOCS", "InputDocs")
-drive_manager = DriveManager(SCOPES, TOKEN_FILE)
-invoice_processor = InvoiceProcessor()
 
 def start_processing():
     
@@ -300,55 +272,54 @@ def start_processing():
         end_time = time.time()
         elapsed_time = end_time - start_time
         print(f"Loop execution time: {elapsed_time:.2f}s")
-    
-if "drive_creds" not in st.session_state:
+
+if st.button("Chat Bot"):
+    st.cache_data.clear()
+    st.switch_page("pages/chat_bot.py")
+        
+st.title("Accounts Manager - Google Drive")
+
+if "init_progress" not in st.session_state:
+    st.session_state.init_progress = 0
+
+if "drive_manager" not in st.session_state:
+    SCOPES = ["https://www.googleapis.com/auth/drive"]
     with st.spinner("🔐 Logging into Google Drive..."):
-        st.session_state.drive_creds = drive_manager.login_to_google_drive()
+        st.session_state.drive_manager = DriveManager(SCOPES)
     st.success("✅ Logged in successfully")
     
-if not st.session_state.initialized:
+drive_manager = st.session_state.drive_manager
+
+if "drive_dirs" not in st.session_state:
+    SCOPES = ["https://www.googleapis.com/auth/drive"]
+    PROJECT_ROOT = "Invoice_Processing"
+    INPUTDOCS = st.secrets["INPUTDOCS"]
     st.subheader("🚀 Initializing workspace")
     progress = st.progress(0)
     status = st.empty()
-    service = drive_manager.build_drive_service(st.session_state.drive_creds)
-
+    
     # Step 1: Root folder
     status.info("📁 Checking root folder...")
-    root_folder_id = drive_manager.get_or_create_root_folder(
-        service,
-        INPUTDOCS
-    )
+    project_id = drive_manager.get_or_create_folder(PROJECT_ROOT)
+    
     progress.progress(25)
     st.info(f"Processing files from folder: {INPUTDOCS}")
-    
-    # Step 2: Subfolders
-    SUB_FOLDERS = ["scanned_docs", "invalid_docs", "output"]
-    DRIVE_DIRS = {}
-    # Create project folder structure if not exists
-    DRIVE_PROJECT_ROOT = "Invoice_Processing"
-    project_id = drive_manager.get_or_create_folder(service, DRIVE_PROJECT_ROOT)
-    
-    for idx, folder in enumerate(SUB_FOLDERS, start=1):
-        status.info(f"📂 Ensuring folder: {folder}")
-        DRIVE_DIRS[folder] = drive_manager.get_or_create_folder(
-            service,
-            folder,
-            parent_id=project_id
-        )
-        progress.progress(25 + idx * 15)
-        time.sleep(0.5)  # UX smoothness
         
-        # Save for later use
-        st.session_state.drive_service = service
-        st.session_state.DRIVE_DIRS = DRIVE_DIRS
-        st.session_state.root_folder_id = root_folder_id
-
+    st.session_state.drive_dirs = {
+        "project_id": project_id,
+        "scanned_docs": drive_manager.get_or_create_folder("scanned_docs", project_id),
+        "invalid_docs": drive_manager.get_or_create_folder("invalid_docs", project_id),
+        "output": drive_manager.get_or_create_folder("output", project_id),
+    }
     progress.progress(100)
     status.success("✅ Initialization complete")
-
-    st.session_state.initialized = True
     time.sleep(1)
-    st.rerun()
+    
+    start_processing()
+
+if "initiate_invoice_processor" not in st.session_state:
+    invoice_processor = InvoiceProcessor()
+    st.session_state.initiate_invoice_processor = True
     
 if not st.session_state.initialized:
     st.info("⏳ Preparing your workspace, please wait...")
@@ -356,8 +327,8 @@ if not st.session_state.initialized:
 
 service = st.session_state.drive_service
 root_folder_id = st.session_state.root_folder_id
-DRIVE_DIRS = st.session_state.DRIVE_DIRS
-output_id = DRIVE_DIRS["output"]
+DRIVE_DIRS = st.session_state.drive_dirs
+output_id = st.session_state.drive_dirs["output"]
 
 st.session_state["drive_ready"] = True
 

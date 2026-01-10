@@ -24,11 +24,6 @@ if st.button("Drive Manager"):
 # ================= Streamlit UI =================
 st.title("Accounts Manager Chat bot")
 
-# GEMINI_API_KEY = os.getenv("api_key")  
-# MODEL = os.getenv("model", "gemini-2.5-flash-lite")
-# genai.configure(api_key=GEMINI_API_KEY)
-# model = genai.GenerativeModel(MODEL)
-
 client_info = ai_models.initiate_huggingface_model()
 client = client_info["client"]
 OPENAI_MODEL = client_info["model"]
@@ -44,14 +39,13 @@ def llm_call(prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
-# SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
-drive_manager = DriveManager(SCOPES, "token.json")
+drive_manager = DriveManager(SCOPES)
 
 @st.cache_data(show_spinner=True)
 def load_invoices_from_drive():
     try:
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        creds = Credentials.from_service_account_info(st.secrets["google_service_account"], SCOPES)
         drive_service = build("drive", "v3", credentials=creds)
         DRIVE_PROJECT_ROOT = "Invoice_Processing"
         OUTPUT_FOLDER_NAME = "output"
