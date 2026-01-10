@@ -20,10 +20,16 @@ class InvoiceProcessor:
         self.client = self.client_info["client"]
         self.OPENAI_MODEL = self.client_info["model"]
 
-        self.reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+        self.reader = None
 
         self.year_month_data = defaultdict(lambda: defaultdict(list))
-        
+    
+    def get_ocr_reader(self):
+        if self.reader is None:
+            import easyocr
+            self.reader = easyocr.Reader(['en'], gpu=False)
+        return self.reader
+    
     # ================= LLM Call =================
     def safe_json_load(self, text):
         try:
@@ -93,6 +99,7 @@ class InvoiceProcessor:
                     tmp.write(fh.getvalue())
                     temp_path = tmp.name
 
+                self.reader = self.get_ocr_reader()
                 text = "\n".join(self.reader.readtext(temp_path, detail=0, paragraph=True))
                 os.remove(temp_path)
 
