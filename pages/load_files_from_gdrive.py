@@ -280,6 +280,7 @@ if st.button("Chat Bot"):
     st.switch_page("pages/chat_bot.py")
         
 st.title("Accounts Manager - Google Drive")
+INPUTDOCS = st.secrets["INPUTDOCS"]
 
 if "init_progress" not in st.session_state:
     st.session_state.init_progress = 0
@@ -295,7 +296,7 @@ drive_manager = st.session_state.drive_manager
 if "drive_dirs" not in st.session_state:
     SCOPES = ["https://www.googleapis.com/auth/drive"]
     PROJECT_ROOT = "Invoice_Processing"
-    INPUTDOCS = st.secrets["INPUTDOCS"]
+    
     st.subheader("🚀 Initializing workspace")
     progress = st.progress(0)
     status = st.empty()
