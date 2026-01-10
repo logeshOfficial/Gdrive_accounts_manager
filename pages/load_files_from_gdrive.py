@@ -297,17 +297,24 @@ if "drive_manager" not in st.session_state:
     
     # Step 1: Root folder
     status.info("📁 Checking root folder...")
-    project_id = st.session_state.drive_manager.get_or_create_folder(PROJECT_ROOT)
+    root_folder_id = st.session_state.drive_manager.resolve_folder_id(INPUTDOCS)
     
     progress.progress(25)
     st.info(f"Processing files from folder: {INPUTDOCS}")
-        
+    
     st.session_state.drive_dirs = {
-        "project_id": project_id,
-        "scanned_docs": st.session_state.drive_manager.get_or_create_folder("scanned_docs", project_id),
-        "invalid_docs": st.session_state.drive_manager.get_or_create_folder("invalid_docs", project_id),
-        "output": st.session_state.drive_manager.get_or_create_folder("output", project_id),
+        "project_id": root_folder_id,
+        "scanned_docs": st.session_state.drive_manager.get_or_create_folder(
+            "scanned_docs", root_folder_id
+        ),
+        "invalid_docs": st.session_state.drive_manager.get_or_create_folder(
+            "invalid_docs", root_folder_id
+        ),
+        "output": st.session_state.drive_manager.get_or_create_folder(
+            "output", root_folder_id
+        ),
     }
+
     progress.progress(100)
     status.success("✅ Initialization complete")
     time.sleep(1)
