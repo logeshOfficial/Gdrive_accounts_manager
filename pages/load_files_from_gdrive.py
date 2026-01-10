@@ -14,6 +14,10 @@ from google.api_core.exceptions import ResourceExhausted
 from googleapiclient.http import MediaFileUpload
 import config
 
+if "initiate_invoice_processor" not in st.session_state:
+    invoice_processor = InvoiceProcessor()
+    st.session_state.initiate_invoice_processor = True
+    
 def start_processing():
     
     st.success("🟢 System ready")
@@ -320,10 +324,6 @@ if "drive_dirs" not in st.session_state:
     output_id = st.session_state.drive_dirs["output"]
     
     start_processing()
-
-if "initiate_invoice_processor" not in st.session_state:
-    invoice_processor = InvoiceProcessor()
-    st.session_state.initiate_invoice_processor = True
     
 st.session_state["drive_ready"] = True
 
