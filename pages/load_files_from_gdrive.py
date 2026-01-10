@@ -320,7 +320,7 @@ if "drive_dirs" not in st.session_state:
     time.sleep(1)
     
     service = drive_manager.service
-    root_folder_id = project_id
+    root_folder_id = INPUTDOCS
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
     
