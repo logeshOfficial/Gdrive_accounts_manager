@@ -21,7 +21,6 @@ def start_processing():
 
 
     all_files = drive_manager.list_files_in_folder(
-        service,
         root_folder_id
     )
 
