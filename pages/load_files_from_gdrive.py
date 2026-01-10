@@ -25,7 +25,7 @@ def start_processing():
 
 
     all_files = drive_manager.list_files_in_folder(
-        root_folder_id
+        st.session_state.root_folder_id
     )
 
     # ================= Main Processing Loop =================
@@ -317,7 +317,7 @@ if "drive_dirs" not in st.session_state:
     status.success("✅ Initialization complete")
     time.sleep(1)
     
-    root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
+    st.session_state.root_folder_id = drive_manager.resolve_folder_id(INPUTDOCS)
     DRIVE_DIRS = st.session_state.drive_dirs
     output_id = st.session_state.drive_dirs["output"]
 
