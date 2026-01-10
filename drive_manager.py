@@ -23,7 +23,24 @@ class DriveManager:
             st.error("Error ocured while loading Google Drive credentials on secrets. Please contact the administrator.")
             st.stop()
             
-        
+    def get_child_folder_id(service, folder_name, parent_id):
+        query = (
+            f"name='{folder_name}' and "
+            f"mimeType='application/vnd.google-apps.folder' and "
+            f"'{parent_id}' in parents and "
+            f"trashed=false"
+        )
+
+        result = service.files().list(
+            q=query,
+            fields="files(id, name)"
+        ).execute()
+
+        if not result["files"]:
+            raise ValueError("Folder not found")
+
+        return result["files"][0]["id"]
+
 
     def drive_execute(self, request, retries=8):
         for i in range(retries):

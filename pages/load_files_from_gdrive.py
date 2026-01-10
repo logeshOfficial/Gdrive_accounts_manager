@@ -300,7 +300,8 @@ if "drive_manager" not in st.session_state:
     status.info("📁 Checking root folder...")
     root_folder_id = st.session_state.drive_manager.resolve_folder_id(PARENT_FOLDER)
     input_docs_folder_id = st.session_state.drive_manager.resolve_folder_id(INPUT_DOCS)
-    
+    folder_b_id = st.session_state.drive_manager.get_child_folder_id(st.session_state.drive_manager.service, INPUT_DOCS, root_folder_id)
+
     progress.progress(25)
     st.info(f"Processing files from folder: {PARENT_FOLDER}")
     
