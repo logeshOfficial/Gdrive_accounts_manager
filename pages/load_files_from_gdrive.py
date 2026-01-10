@@ -21,7 +21,7 @@ def start_processing():
 
 
     all_files = drive_manager.list_files_in_folder(
-        root_folder_id
+        input_docs_folder_id
     )
 
     # ================= Main Processing Loop =================
