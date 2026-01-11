@@ -230,8 +230,8 @@ def start_processing():
 
             st.write(existing_files)
 
-            if existing:
-                st.session_state.drive_manager.download_drive_file(existing[0]["id"], local)
+            if existing_files:
+                st.session_state.drive_manager.download_drive_file(existing_files[0]["id"], local)
 
             if os.path.exists(local):
                 with pd.ExcelWriter(
@@ -267,9 +267,9 @@ def start_processing():
                         gc.collect()
                 
             media = MediaFileUpload(local, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resumable=True)
-            if existing:
+            if existing_files:
                 request = st.session_state.drive_manager.service.files().update(
-                fileId=existing[0]["id"],
+                fileId=existing_files[0]["id"],
                 media_body=media,
                 supportsAllDrives=True
                 )
