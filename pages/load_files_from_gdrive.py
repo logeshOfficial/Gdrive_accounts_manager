@@ -221,11 +221,13 @@ def start_processing():
             existing = st.session_state.drive_manager.drive_execute(
                 st.session_state.drive_manager.service.files().list(
                     q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
-                    fields="files(id)"
+                    fields="files(id)",
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True
                 )
-            )["files"]
-            time.sleep(2) 
-             
+            )
+            
+            st.write(existing)
             if existing:
                 st.session_state.drive_manager.download_drive_file(existing[0]["id"], local)
 
