@@ -213,83 +213,98 @@ def start_processing():
         
         st.info(f"Year-Month Data: {invoice_processor.year_month_data}")
         # ===================== EXCEL =====================
+        
+        st.info("📊 Generating Excel reports...")
+
         for year, months in invoice_processor.year_month_data.items():
-            fname = f"invoices_{year}.xlsx"
-            tmp_dir = tempfile.mkdtemp()
-            local = os.path.join(tmp_dir, fname)
-
-            result = st.session_state.drive_manager.drive_execute(
-                st.session_state.drive_manager.service.files().list(
-                    q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
-                    fields="files(id)",
-                    supportsAllDrives=True,
-                    includeItemsFromAllDrives=True
+            try:
+                invoice_processor.create_and_upload_excel(
+                    drive_manager=st.session_state.drive_manager,
+                    output_folder_id=output_id,
+                    year=year,
+                    months_data=months,
                 )
-            )
-            existing_files = result.get("files", [])
+                st.success(f"✅ Excel uploaded for {year}")
+            except Exception as e:
+                st.error(f"❌ Failed Excel for {year}: {e}")
 
-            st.write(existing_files)
+        # for year, months in invoice_processor.year_month_data.items():
+        #     fname = f"invoices_{year}.xlsx"
+        #     tmp_dir = tempfile.mkdtemp()
+        #     local = os.path.join(tmp_dir, fname)
 
-            if existing_files:
-                st.session_state.drive_manager.download_drive_file(existing_files[0]["id"], local)
+        #     result = st.session_state.drive_manager.drive_execute(
+        #         st.session_state.drive_manager.service.files().list(
+        #             q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
+        #             fields="files(id)",
+        #             supportsAllDrives=True,
+        #             includeItemsFromAllDrives=True
+        #         )
+        #     )
+        #     existing_files = result.get("files", [])
 
-            if os.path.exists(local):
-                with pd.ExcelWriter(
-                    local,
-                    engine="openpyxl",
-                    mode="a",
-                    if_sheet_exists="overlay"
-                ) as writer:
-                    for month, data in months.items():
-                        df = pd.DataFrame(data)
+        #     st.write(existing_files)
 
-                        if month in writer.book.sheetnames:
-                            startrow = writer.sheets[month].max_row
-                            df.to_excel(
-                                writer,
-                                sheet_name=month,
-                                index=False,
-                                header=False,
-                                startrow=startrow
-                            )
-                        else:
-                            df.to_excel(writer, sheet_name=month, index=False)
+        #     if existing_files:
+        #         st.session_state.drive_manager.download_drive_file(existing_files[0]["id"], local)
 
-                        del df
-                        gc.collect()
-                        time.sleep(1)
-            else:
-                with pd.ExcelWriter(local, engine="openpyxl", mode="w") as writer:
-                    for month, data in months.items():
-                        df = pd.DataFrame(data)
-                        st.write(df)
-                        df.to_excel(writer, sheet_name=month, index=False)
-                        st.write(df)
-                        del df
-                        gc.collect()
+        #     if os.path.exists(local):
+        #         with pd.ExcelWriter(
+        #             local,
+        #             engine="openpyxl",
+        #             mode="a",
+        #             if_sheet_exists="overlay"
+        #         ) as writer:
+        #             for month, data in months.items():
+        #                 df = pd.DataFrame(data)
+
+        #                 if month in writer.book.sheetnames:
+        #                     startrow = writer.sheets[month].max_row
+        #                     df.to_excel(
+        #                         writer,
+        #                         sheet_name=month,
+        #                         index=False,
+        #                         header=False,
+        #                         startrow=startrow
+        #                     )
+        #                 else:
+        #                     df.to_excel(writer, sheet_name=month, index=False)
+
+        #                 del df
+        #                 gc.collect()
+        #                 time.sleep(1)
+        #     else:
+        #         with pd.ExcelWriter(local, engine="openpyxl", mode="w") as writer:
+        #             for month, data in months.items():
+        #                 df = pd.DataFrame(data)
+        #                 st.write(df)
+        #                 df.to_excel(writer, sheet_name=month, index=False)
+        #                 st.write(df)
+        #                 del df
+        #                 gc.collect()
                 
-            media = MediaFileUpload(local, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resumable=True)
-            if existing_files:
-                request = st.session_state.drive_manager.service.files().update(
-                fileId=existing_files[0]["id"],
-                media_body=media,
-                supportsAllDrives=True
-                )
+        #     media = MediaFileUpload(local, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", resumable=True)
+        #     if existing_files:
+        #         request = st.session_state.drive_manager.service.files().update(
+        #         fileId=existing_files[0]["id"],
+        #         media_body=media,
+        #         supportsAllDrives=True
+        #         )
 
-                st.session_state.drive_manager.drive_execute(request)
+        #         st.session_state.drive_manager.drive_execute(request)
             
-            else:
-                request = st.session_state.drive_manager.service.files().create(
-                    body={"name": fname, "parents": [output_id]},
-                    media_body=media,
-                    supportsAllDrives=True
-                )
+        #     else:
+        #         request = st.session_state.drive_manager.service.files().create(
+        #             body={"name": fname, "parents": [output_id]},
+        #             media_body=media,
+        #             supportsAllDrives=True
+        #         )
 
-                st.session_state.drive_manager.drive_execute(request)
+        #         st.session_state.drive_manager.drive_execute(request)
 
                 
-            import shutil
-            shutil.rmtree(tmp_dir, ignore_errors=True)
+        #     import shutil
+        #     shutil.rmtree(tmp_dir, ignore_errors=True)
             
         status.info("✅ Processing complete!")
         st.success(f"✅ Completed in {time.time()-start_time:.2f}s")

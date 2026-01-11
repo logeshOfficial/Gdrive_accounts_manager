@@ -81,6 +81,79 @@ class InvoiceProcessor:
     #         print("Exception: ", str(e))
     #         return False
 
+    def create_and_upload_excel(
+    drive_manager,
+    output_folder_id,
+    year,
+    months_data
+):
+        import tempfile, os, time
+        import pandas as pd
+        from googleapiclient.http import MediaFileUpload
+
+        filename = f"invoices_{year}.xlsx"
+        tmp_dir = tempfile.mkdtemp()
+        local_path = os.path.join(tmp_dir, filename)
+
+        # --- WRITE EXCEL ---
+        with pd.ExcelWriter(local_path, engine="openpyxl", mode="w") as writer:
+            sheets_written = False
+
+            for month, invoices in months_data.items():
+                if not invoices:
+                    continue
+
+                df = pd.DataFrame(invoices)
+                df.to_excel(writer, sheet_name=month, index=False)
+                sheets_written = True
+
+            if not sheets_written:
+                raise RuntimeError("No valid invoice data to write")
+
+        # Ensure file is flushed
+        time.sleep(1)
+
+        if not os.path.exists(local_path) or os.path.getsize(local_path) == 0:
+            raise RuntimeError("Excel file not created correctly")
+
+        # --- CHECK EXISTING FILE ---
+        result = drive_manager.drive_execute(
+            drive_manager.service.files().list(
+                q=f"name='{filename}' and '{output_folder_id}' in parents and trashed=false",
+                fields="files(id)",
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+            )
+        )
+
+        existing = result.get("files", [])
+        media = MediaFileUpload(
+            local_path,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            resumable=True,
+        )
+
+        # --- UPLOAD ---
+        if existing:
+            request = drive_manager.service.files().update(
+                fileId=existing[0]["id"],
+                media_body=media,
+                supportsAllDrives=True,
+            )
+        else:
+            request = drive_manager.service.files().create(
+                body={"name": filename, "parents": [output_folder_id]},
+                media_body=media,
+                supportsAllDrives=True,
+            )
+
+        drive_manager.drive_execute(request)
+
+        # Cleanup
+        import shutil
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
     def extractor(self, service, files):
         results = []
         for f in files:
