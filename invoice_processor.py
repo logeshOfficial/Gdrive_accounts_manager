@@ -81,7 +81,7 @@ class InvoiceProcessor:
     #         print("Exception: ", str(e))
     #         return False
 
-    def create_and_upload_excel(
+    def create_and_upload_excel(self,
     drive_manager,
     output_folder_id,
     year,
