@@ -224,16 +224,16 @@ class DriveManager:
 
     def authenticate_oauth(self):
         client_config = st.secrets["google_oauth"]
+
         flow = Flow.from_client_config(
             client_config,
-            scopes=self.SCOPES,
-            redirect_uri="urn:ietf:wg:oauth:2.0:oob"
+            scopes=["https://www.googleapis.com/auth/drive.file"]
         )
 
         auth_url, _ = flow.authorization_url(prompt="consent")
-        st.info("🔐 Please authorize the app with Google Drive:")
-        st.write(f"[Click here to authenticate]({auth_url})")
-        auth_code = st.text_input("Enter the authorization code here:")
+        st.write(f"Authorize here: {auth_url}")
+
+        auth_code = st.text_input("Enter the authorization code:")
         if auth_code:
             flow.fetch_token(code=auth_code)
             st.success("✅ Google Drive authentication successful!")
