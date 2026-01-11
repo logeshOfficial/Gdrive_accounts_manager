@@ -127,12 +127,14 @@ class InvoiceProcessor:
         )
 
         existing = result.get("files", [])
+        st.write(existing)
         media = MediaFileUpload(
             local_path,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             resumable=True,
         )
 
+        st.write(media)
         # --- UPLOAD ---
         if existing:
             request = drive_manager.service.files().update(
