@@ -262,7 +262,9 @@ def start_processing():
                 with pd.ExcelWriter(local, engine="openpyxl", mode="w") as writer:
                     for month, data in months.items():
                         df = pd.DataFrame(data)
+                        st.write(df)
                         df.to_excel(writer, sheet_name=month, index=False)
+                        st.write(df)
                         del df
                         gc.collect()
                 
