@@ -218,7 +218,7 @@ def start_processing():
             tmp_dir = tempfile.mkdtemp()
             local = os.path.join(tmp_dir, fname)
 
-            existing = st.session_state.drive_manager.drive_execute(
+            result = st.session_state.drive_manager.drive_execute(
                 st.session_state.drive_manager.service.files().list(
                     q=f"name='{fname}' and '{output_id}' in parents and trashed=false",
                     fields="files(id)",
@@ -226,8 +226,10 @@ def start_processing():
                     includeItemsFromAllDrives=True
                 )
             )
-            
-            st.write(existing)
+            existing_files = result.get("files", [])
+
+            st.write(existing_files)
+
             if existing:
                 st.session_state.drive_manager.download_drive_file(existing[0]["id"], local)
 
